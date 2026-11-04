@@ -1,6 +1,5 @@
 /** Лента сделок: стрим aggTrade, кэп 40, подсветка «крупных» и баланс продаж/покупок. */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
 import type { TradeTick } from '../api/types'
 import { onChartTrades } from '../store/market'
 import { fmtPrice, fmtTime, fmtCompact, fmtDecimalsForPrice } from '../lib/format'
@@ -21,7 +20,7 @@ export function TradesTape({ symbol }: { symbol: string }) {
       const batch = buf.current
       buf.current = []
       setTrades((prev) => [...batch, ...prev].slice(0, CAP))
-    }, 350)
+    }, 400)
     const off = onChartTrades(symbol, (t) => {
       buf.current.push(t)
       if (buf.current.length > 220) buf.current = buf.current.slice(-120)
@@ -67,13 +66,11 @@ export function TradesTape({ symbol }: { symbol: string }) {
           </span>
         </div>
         <div className="mt-1.5 flex h-[5px] gap-0.5 overflow-hidden rounded-full">
-          <motion.span
-            className="rounded-full"
-            style={{ background: 'var(--up)', opacity: 0.9 }}
-            animate={{ width: `${buyPct}%` }}
-            transition={{ duration: 0.35 }}
+          <span
+            className="rounded-full transition-all duration-300"
+            style={{ background: 'var(--up)', opacity: 0.9, width: `${buyPct}%` }}
           />
-          <motion.span
+          <span
             className="flex-1 rounded-full"
             style={{ background: 'var(--down)', opacity: 0.9 }}
           />
@@ -87,13 +84,9 @@ export function TradesTape({ symbol }: { symbol: string }) {
       </div>
       {trades.length === 0 ? (
         <div className="flex h-[190px] items-center justify-center text-faint">
-          <motion.span
-            animate={{ opacity: [0.3, 0.7, 0.3] }}
-            transition={{ repeat: Infinity, duration: 1.6 }}
-            className="text-[12px]"
-          >
+          <span className="text-[12px] animate-pulse">
             Tape…
-          </motion.span>
+          </span>
         </div>
       ) : (
         <div className="flex max-h-[210px] flex-col overflow-hidden">
@@ -102,15 +95,11 @@ export function TradesTape({ symbol }: { symbol: string }) {
             const whale = notional >= WHALE_NOTIONAL
             const col = t.sell ? 'var(--down)' : 'var(--up)'
             return (
-              <motion.div
+              <div
                 key={`${t.ts}-${t.price}-${t.qty}-${i}`}
-                initial={{ opacity: 0, y: -8, backgroundColor: t.sell ? 'rgba(234,57,67,0.12)' : 'rgba(22,199,132,0.12)' }}
-                animate={{
-                  opacity: whale ? 1 : 1 - Math.min(0.55, i * 0.035),
-                  y: 0,
-                  backgroundColor: 'rgba(0,0,0,0)',
+                style={{
+                  opacity: whale ? 1 : Math.max(0.45, 1 - i * 0.035),
                 }}
-                transition={{ duration: 0.35, backgroundColor: { duration: 0.8, ease: 'easeOut' } }}
                 className="grid shrink-0 items-center grid-cols-3 rounded py-[1.5px] text-[11px] tnum"
               >
                 <span className="flex items-center gap-1 font-medium" style={{ color: col }}>
@@ -125,7 +114,7 @@ export function TradesTape({ symbol }: { symbol: string }) {
                   {parseFloat(t.qty).toFixed(qtyDecimals)}
                 </span>
                 <span className="text-right text-[9.5px] text-faint">{fmtTime(t.ts)}</span>
-              </motion.div>
+              </div>
             )
           })}
         </div>

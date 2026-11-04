@@ -467,12 +467,7 @@ const MarketRow = React.memo(function MarketRow({
   const up = ticker.changePct24h >= 0
 
   return (
-    <motion.div
-      layout="position"
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
+    <div
       className="group flex items-center gap-3 rounded-xl px-4 py-2 transition-colors duration-150 active:bg-surface-3"
       style={{ minHeight: 68, touchAction: 'pan-y' }}
       onClick={() => onOpen(ticker.symbol)}
@@ -480,7 +475,7 @@ const MarketRow = React.memo(function MarketRow({
     >
       {/* Icon + optional rank badge */}
       <div className="relative shrink-0">
-        <CoinIcon symbol={ticker.symbol} size={38} layoutId={`coin-${ticker.symbol}`} />
+        <CoinIcon symbol={ticker.symbol} size={38} />
         {rank && rank <= 5 && (
           <span
             className="absolute -right-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full text-[9px] font-bold text-white"
@@ -529,7 +524,7 @@ const MarketRow = React.memo(function MarketRow({
       >
         <Plus size={18} />
       </button>
-    </motion.div>
+    </div>
   )
 })
 

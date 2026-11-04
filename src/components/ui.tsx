@@ -1,64 +1,74 @@
-/** Базовые UI-примитивы: Seg, Chip, Button (spring tap), Stat, Sheet (vaul). */
+/** Базовые UI-примитивы: Seg, Chip, TapButton, Stat, Sheet (vaul), Modal. */
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Drawer } from 'vaul'
 import { X } from 'lucide-react'
 import { buzz } from '../lib/haptics'
 
-/** Сегмент-контрол (переключатели табо/типов). */
+/** Сегмент-контрол (переключатели табов/типов) с плавным скользящим бегунком. */
 export function Seg<T extends string>({
   value,
   options,
   onChange,
   layoutId,
   size = 'md',
+  className,
 }: {
   value: T
   options: Array<{ value: T; label: string }>
   onChange: (v: T) => void
   layoutId?: string
   size?: 'sm' | 'md'
+  className?: string
 }) {
+  const autoId = React.useId()
+  const activeLayoutId = layoutId || `seg-${autoId}`
+
   return (
-    <div className={`flex items-center gap-1 rounded-full border border-line/50 p-1 ${size === 'sm' ? 'text-[11px]' : 'text-[13px]'}`}
-      style={{ background: 'rgba(255,255,255,0.03)' }}
+    <div
+      className={`inline-flex items-center gap-0.5 rounded-xl p-0.5 border border-line/40 select-none ${
+        size === 'sm' ? 'text-[11px]' : 'text-[13px]'
+      } ${className ?? ''}`}
+      style={{ background: 'var(--surface-3)' }}
     >
       {options.map((o) => {
         const active = o.value === value
         return (
-          <motion.button
+          <button
             key={o.value}
+            type="button"
             onClick={() => {
               if (!active) {
                 buzz(4)
                 onChange(o.value)
               }
             }}
-            className={`relative rounded-full px-3 ${size === 'sm' ? 'py-1.5' : 'py-2'} font-medium ${
-              active ? 'text-white' : 'text-muted'
+            className={`relative rounded-[9px] px-2.5 ${
+              size === 'sm' ? 'py-1' : 'py-1.5'
+            } font-medium transition-colors select-none outline-none ${
+              active ? 'text-text font-semibold' : 'text-faint hover:text-muted'
             }`}
-            whileTap={{ scale: 0.96 }}
           >
             {active && (
               <motion.span
-                layoutId={layoutId}
-                className="absolute inset-0"
+                layoutId={activeLayoutId}
+                className="absolute inset-0 rounded-[9px] shadow-sm"
                 style={{
-                  borderRadius: 99,
-                  background: 'linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 80%, #6366f1))',
-                  boxShadow: '0 0 12px rgba(91,123,254,0.3)',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--line-strong)',
                 }}
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 35 }}
               />
             )}
             <span className="relative z-10 whitespace-nowrap tnum">{o.label}</span>
-          </motion.button>
+          </button>
         )
       })}
     </div>
   )
 }
 
+/** Плоский чистый чип с высокой контрастностью и скруглёнными углами. */
 export function Chip({
   color,
   children,
@@ -68,26 +78,23 @@ export function Chip({
   children: React.ReactNode
   className?: string
 }) {
-  const cls = {
-    up: 'chip-up',
-    down: 'chip-down',
-    warn: 'chip-warn',
-    accent: 'chip-accent',
-    neutral: 'chip-neutral',
-  }[color]
+  const colorMap = {
+    up: 'bg-up/10 text-up border-up/20',
+    down: 'bg-down/10 text-down border-down/20',
+    warn: 'bg-warn/10 text-warn border-warn/20',
+    accent: 'bg-accent/10 text-accent border-accent/20',
+    neutral: 'bg-surface3 text-muted border-line',
+  }
   return (
     <span
-      className={`inline-flex items-center rounded-lg px-2 py-[3px] text-[12px] font-semibold tnum ${cls} ${className ?? ''}`}
-      style={{
-        WebkitBackdropFilter: 'blur(8px)',
-        backdropFilter: 'blur(8px)',
-      }}
+      className={`inline-flex items-center rounded-[6px] border px-1.5 py-0.5 text-[11px] font-semibold tnum ${colorMap[color]} ${className ?? ''}`}
     >
       {children}
     </span>
   )
 }
 
+/** Солидная элегантная кнопка с мягким откликом scale: 0.98 без тяжёлых теней. */
 export function TapButton({
   children,
   onClick,
@@ -95,6 +102,7 @@ export function TapButton({
   disabled,
   haptic = true,
   variant,
+  type = 'button',
 }: {
   children: React.ReactNode
   onClick?: () => void
@@ -102,24 +110,25 @@ export function TapButton({
   disabled?: boolean
   haptic?: boolean
   variant?: 'buy' | 'sell'
+  type?: 'button' | 'submit' | 'reset'
 }) {
-  const glowStyle = variant === 'buy'
-    ? { boxShadow: '0 0 20px rgba(34,197,94,0.25), 0 0 6px rgba(34,197,94,0.15)' }
+  const variantClass = variant === 'buy'
+    ? 'bg-up text-[#062f1d]'
     : variant === 'sell'
-      ? { boxShadow: '0 0 20px rgba(239,68,68,0.25), 0 0 6px rgba(239,68,68,0.15)' }
-      : undefined
+      ? 'bg-down text-white'
+      : ''
 
   return (
     <motion.button
-      className={`btn-solid ${className ?? ''}`}
+      type={type}
+      className={`btn-solid relative inline-flex items-center justify-center font-semibold select-none transition-colors disabled:opacity-40 disabled:pointer-events-none ${variantClass} ${className ?? ''}`}
       disabled={disabled}
       onClick={() => {
         if (haptic) buzz(8)
         onClick?.()
       }}
-      style={glowStyle}
-      whileTap={disabled ? undefined : { scale: 0.97 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      whileTap={disabled ? undefined : { scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 450, damping: 30 }}
     >
       {children}
     </motion.button>
@@ -136,14 +145,14 @@ export function Stat({
   className?: string
 }) {
   return (
-    <div className={`${className ?? ''}`}>
+    <div className={className ?? ''}>
       <div className="text-[11px] font-medium uppercase tracking-wider text-faint">{label}</div>
       <div className="mt-1 text-[15px] font-semibold tnum">{children}</div>
     </div>
   )
 }
 
-/** Нижний sheet (vaul): пружина + свайп-закрытие + scrim. */
+/** Нижний drawer (vaul) с минималистичным хэндлом и плавной пружиной. */
 export function Sheet({
   open,
   onOpenChange,
@@ -157,66 +166,54 @@ export function Sheet({
   children: React.ReactNode
   maxHeight?: string
 }) {
-  const spring = { type: 'spring' as const, stiffness: 380, damping: 30 }
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange} repositionInputs={false}>
       <Drawer.Portal>
         <Drawer.Overlay
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-50 transition-opacity"
           style={{
-            background: 'rgba(4,6,10,0.6)',
-            WebkitBackdropFilter: 'blur(10px) saturate(1.4)',
-            backdropFilter: 'blur(10px) saturate(1.4)',
+            background: 'rgba(0, 0, 0, 0.6)',
+            WebkitBackdropFilter: 'blur(12px)',
+            backdropFilter: 'blur(12px)',
           }}
         />
         <Drawer.Content
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-xl"
-          style={{ maxHeight }}
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex w-full max-w-xl flex-col rounded-t-[24px] border-t border-white/[0.08] outline-none"
+          style={{
+            maxHeight,
+            background: 'var(--surface-2)',
+            boxShadow: '0 -10px 40px -10px rgba(0, 0, 0, 0.5)',
+          }}
         >
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={spring}
-            className="rounded-t-[28px] border-t border-line/50"
-            style={{
-              background: 'var(--surface-2)',
-              boxShadow: 'var(--shadow-float), 0 -8px 32px rgba(0,0,0,0.3)',
-              maxHeight,
-              display: 'flex',
-              flexDirection: 'column',
-            }}
+          {/* Header & Clean Minimalist Handle */}
+          <div
+            className="relative flex flex-col items-center pt-3 pb-2 select-none"
+            style={{ touchAction: 'none' }}
           >
-            <div
-              className="relative flex items-center justify-center pt-3"
-              style={{ touchAction: 'none' }}
+            <div className="h-1 w-10 rounded-full bg-white/20 transition-colors" />
+
+            {title && (
+              <div className="mt-3 w-full px-12 text-center text-[15px] font-semibold text-text tracking-tight truncate">
+                {title}
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="absolute right-4 top-3 flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:text-text bg-white/[0.05] active:bg-white/[0.1]"
+              onClick={() => onOpenChange(false)}
+              aria-label="close"
             >
-              <span
-                className="h-[5px] w-12 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.2)' }}
-              />
-              {title && (
-                <div className="absolute left-1/2 top-8 -translate-x-1/2 max-w-[80%] truncate text-[15px] font-semibold">
-                  {title}
-                </div>
-              )}
-              <button
-                className="absolute right-4 top-5 flex h-9 w-9 items-center justify-center rounded-full text-muted"
-                style={{ background: 'rgba(255,255,255,0.06)' }}
-                onClick={() => onOpenChange(false)}
-                aria-label="close"
-              >
-                <X size={17} />
-              </button>
-            </div>
-            <div
-              className="scroll px-4"
-              style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 14px)' }}
-            >
-              {title ? <div className="h-9" /> : <div className="h-2" />}
-              {children}
-            </div>
-          </motion.div>
+              <X size={15} strokeWidth={2} />
+            </button>
+          </div>
+
+          <div
+            className="scroll flex-1 px-4"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 14px)' }}
+          >
+            {children}
+          </div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
@@ -226,7 +223,7 @@ export function Sheet({
 /** Простое модальное окно-состояние (затемнение + карта по центру). */
 export function Modal({
   open,
-  onOpenChange: onOpenChange,
+  onOpenChange,
   children,
 }: {
   open: boolean
@@ -237,19 +234,24 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 select-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
           onClick={() => onOpenChange(false)}
-          style={{ background: 'rgba(4,6,10,0.6)', WebkitBackdropFilter: 'blur(8px)', backdropFilter: 'blur(8px)' }}
+          style={{
+            background: 'rgba(0, 0, 0, 0.6)',
+            WebkitBackdropFilter: 'blur(12px)',
+            backdropFilter: 'blur(12px)',
+          }}
         >
           <motion.div
-            initial={{ scale: 0.92, opacity: 0 }}
+            initial={{ scale: 0.96, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.92, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-            className="w-full max-w-sm rounded-[24px] border border-line p-5"
+            exit={{ scale: 0.96, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+            className="w-full max-w-sm rounded-[22px] border border-white/[0.08] p-5 shadow-2xl"
             style={{ background: 'var(--surface-2)' }}
             onClick={(e) => e.stopPropagation()}
           >

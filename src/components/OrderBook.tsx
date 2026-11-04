@@ -1,7 +1,6 @@
 /** Стакан в стиле про-терминала: кумулятив Σ на-quote, бары глубины справа, спред-строка.
  *  Тап по уровню — цена в ордер-пэд (ask → buy, bid → sell). */
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { Depth } from '../api/types'
 import { onChartDepth } from '../store/market'
 import { useLongPress } from '../hooks/useLongPress'
@@ -27,8 +26,16 @@ export function OrderBook({
   const lastMid = useRef(0)
 
   useEffect(() => {
-    const off = onChartDepth(symbol, (d) => {
+    let lastRenderTime = 0
+    let timeoutId: number | null = null
+    let latestData: Depth | null = null
+
+    const flush = () => {
+      timeoutId = null
+      if (!latestData) return
+      const d = latestData
       setDepth(d)
+
       // короткая вспышка стороны, к которой пришёл агрессор
       const bid = parseFloat(d.bids[0]?.[0] ?? '0')
       const ask = parseFloat(d.asks[0]?.[0] ?? '0')
@@ -40,9 +47,33 @@ export function OrderBook({
       }
       if (flashTimer.current) window.clearTimeout(flashTimer.current)
       flashTimer.current = window.setTimeout(() => setFlashSide(null), 450)
+    }
+
+    const off = onChartDepth(symbol, (d) => {
+      latestData = d
+      const now = performance.now()
+      const elapsed = now - lastRenderTime
+      if (elapsed >= 150) {
+        lastRenderTime = now
+        if (timeoutId) {
+          window.clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        flush()
+      } else if (!timeoutId) {
+        timeoutId = window.setTimeout(() => {
+          lastRenderTime = performance.now()
+          flush()
+        }, 150 - elapsed)
+      }
     })
+
     setDepth(null)
-    return off
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId)
+      if (flashTimer.current) window.clearTimeout(flashTimer.current)
+      off()
+    }
   }, [symbol])
 
   const levels = useMemo(() => {
@@ -75,13 +106,9 @@ export function OrderBook({
   if (!depth) {
     return (
       <div className="flex h-[264px] flex-col items-center justify-center text-faint">
-        <motion.div
-          animate={{ opacity: [0.3, 0.7, 0.3] }}
-          transition={{ repeat: Infinity, duration: 1.6 }}
-          className="text-[12px]"
-        >
+        <div className="text-[12px] animate-pulse">
           Depth…
-        </motion.div>
+        </div>
       </div>
     )
   }
@@ -97,21 +124,19 @@ export function OrderBook({
 
         {/* asks — снизу вверх (лучшая ближе к спреду) */}
         <div className="flex flex-col-reverse">
-          <AnimatePresence initial={false}>
-            {levels.asksC.map((l, i) => (
-              <Level
-                key={`a${l.price}`}
-                idx={i}
-                side="ask"
-                price={l.price}
-                qty={l.qty}
-                cum={l.cum}
-                maxCum={levels.maxCum}
-                flash={flashSide === 'ask' && l.price === depth.asks[0][0]}
-                onPick={onPricePick}
-              />
-            ))}
-          </AnimatePresence>
+          {levels.asksC.map((l, i) => (
+            <Level
+              key={`a${l.price}`}
+              idx={i}
+              side="ask"
+              price={l.price}
+              qty={l.qty}
+              cum={l.cum}
+              maxCum={levels.maxCum}
+              flash={flashSide === 'ask' && l.price === depth.asks[0]?.[0]}
+              onPick={onPricePick}
+            />
+          ))}
         </div>
 
         {/* центральный блок: Spread в стиле Axiom / Hyperliquid */}
@@ -123,7 +148,7 @@ export function OrderBook({
         </div>
 
         {/* bids — сверху вниз */}
-        <AnimatePresence initial={false}>
+        <div>
           {levels.bidsC.map((l, i) => (
             <Level
               key={`b${l.price}`}
@@ -133,17 +158,17 @@ export function OrderBook({
               qty={l.qty}
               cum={l.cum}
               maxCum={levels.maxCum}
-              flash={flashSide === 'bid' && l.price === depth.bids[0][0]}
+              flash={flashSide === 'bid' && l.price === depth.bids[0]?.[0]}
               onPick={onPricePick}
             />
           ))}
-        </AnimatePresence>
+        </div>
       </div>
     </div>
   )
 }
 
-function Level({
+const Level = React.memo(function Level({
   idx,
   side,
   price,
@@ -167,27 +192,21 @@ function Level({
   const pickSide = side === 'bid' ? 'sell' : 'buy'
   const fade = 1 - Math.min(0.5, idx * 0.07)
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 20 }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.14 }}
-      className="relative grid cursor-pointer grid-cols-[1fr_auto_1fr]"
+    <div
+      className="relative grid h-5 cursor-pointer grid-cols-[1fr_auto_1fr] will-change-transform"
       onClick={() => onPick?.(price, pickSide)}
       style={{ touchAction: 'manipulation' }}
     >
       {/* бар кумулятивной глубины, привязан к правому краю */}
-      <motion.span
-        className="absolute inset-y-0 right-0 rounded-l"
+      <span
+        className="pointer-events-none absolute inset-y-0 right-0 rounded-l"
         style={{
+          width: `${pct}%`,
           background: `linear-gradient(to left, ${color}, transparent)`,
           opacity: flash ? 0.22 : 0.07,
-          transition: 'opacity .35s ease-out',
+          transition: 'width 0.15s ease-out, opacity 0.35s ease-out',
+          transform: 'translate3d(0, 0, 0)',
         }}
-        initial={false}
-        animate={{ width: `${pct}%` }}
-        transition={{ duration: 0.22 }}
       />
       <span
         className={`relative px-1 py-0.5 font-medium ${flash ? 'font-bold' : ''}`}
@@ -201,6 +220,6 @@ function Level({
       <span className="relative py-0.5 pr-1 text-right text-[10.5px] text-muted">
         {fmtCompact(cum)}
       </span>
-    </motion.div>
+    </div>
   )
-}
+})

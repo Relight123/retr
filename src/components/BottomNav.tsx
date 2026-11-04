@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { motion, LayoutGroup } from 'framer-motion'
 import {
   BarChart3,
   ArrowLeftRight,
@@ -10,8 +10,6 @@ import type { Tab } from '../store/navigation'
 import { useNav } from '../store/navigation'
 import { useI18n } from '../lib/i18n'
 import { buzz } from '../lib/haptics'
-
-const spring = { type: 'spring' as const, stiffness: 380, damping: 30 }
 
 const items: Array<{ tab: Tab; Icon: typeof BarChart3; key: string }> = [
   { tab: 'market', Icon: BarChart3, key: 'nav.market' },
@@ -27,11 +25,11 @@ export function BottomNav() {
 
   return (
     <nav
-      className="glass-strong sticky bottom-0 z-40 border-t border-line pt-safe"
+      className="sticky bottom-0 z-40 border-t border-white/[0.06] bg-surface/85 pt-safe select-none"
       style={{
-        paddingBottom: 'max(env(safe-area-inset-bottom), 10px)',
-        WebkitBackdropFilter: 'blur(24px) saturate(1.6)',
-        backdropFilter: 'blur(24px) saturate(1.6)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        backdropFilter: 'blur(20px)',
       }}
     >
       <LayoutGroup id="nav-ind">
@@ -41,56 +39,39 @@ export function BottomNav() {
             return (
               <motion.button
                 key={t_}
+                type="button"
                 onClick={() => {
                   if (!active) {
                     buzz(6)
                     setTab(t_)
                   }
                 }}
-                className="relative flex h-14 flex-col items-center justify-center gap-[3px] pt-2 pb-1"
+                className="relative flex h-14 flex-col items-center justify-center gap-1 pt-1 pb-1 outline-none"
                 style={{ minHeight: 56 }}
-                whileTap={{ scale: 0.9 }}
-                animate={{ scale: active ? 1 : 0.95 }}
-                transition={spring}
+                whileTap={{ scale: 0.94 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               >
                 {active && (
                   <motion.span
-                    layoutId="nav-ind__pill"
-                    className="absolute inset-x-1 -top-0.5 bottom-0 rounded-xl"
-                    style={{
-                      background: 'rgba(91,123,254,0.1)',
-                      border: '1px solid rgba(91,123,254,0.15)',
-                    }}
-                    transition={spring}
+                    layoutId="nav-indicator-dot"
+                    className="absolute top-0 h-[2px] w-6 rounded-full bg-accent shadow-[0_0_8px_var(--accent)]"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                   />
                 )}
-                <motion.span
-                  className={active ? 'text-accent' : 'text-faint'}
-                  animate={{
-                    scale: active ? 1 : 0.92,
-                  }}
-                  style={active ? {
-                    filter: 'drop-shadow(0 0 6px rgba(91,123,254,0.45))',
-                  } : undefined}
-                  transition={spring}
-                >
-                  <Icon size={23} strokeWidth={active ? 2.2 : 1.7} />
-                </motion.span>
                 <span
-                  className={`relative z-10 text-[10px] leading-none tracking-wide ${
-                    active ? 'text-accent font-semibold' : 'text-faint'
+                  className={`transition-colors duration-150 ${
+                    active ? 'text-accent' : 'text-faint'
+                  }`}
+                >
+                  <Icon size={21} strokeWidth={1.75} />
+                </span>
+                <span
+                  className={`text-[10px] tracking-tight transition-colors duration-150 ${
+                    active ? 'text-accent font-medium' : 'text-faint'
                   }`}
                 >
                   {t(key)}
                 </span>
-                {active && (
-                  <motion.span
-                    layoutId="nav-ind__dot"
-                    className="absolute -top-px h-[3px] w-6 rounded-full"
-                    style={{ background: 'var(--accent)' }}
-                    transition={spring}
-                  />
-                )}
               </motion.button>
             )
           })}

@@ -1,34 +1,29 @@
-/** Экран монеты в стиле терминала Axiom / Hyperliquid:
- *  - Top Header: аватарка монеты, выбор тикера с выпадающим списком, крупная цена с флеш-тиками, чип изменения 24ч
- *  - Pro Stats Bar: Oracle/Mark Price, 24h Volume, Open Interest, Funding / Countdown, 24h High/Low
- *  - Timeframe switcher (1m, 5m, 15m, 1h, 4h, 1d) + OHLC-индикатор в стиле Axiom
- *  - OrderBook (спред Spread: 1 · 0.001%) & Trades Tape с индикаторами китов
- *  - Bottom Panel: Позиции (с PnL & Liq Price), Открытые ордера, Сделки
- *  - Sticky Action Bar: Long / Short с неоновым свечением и микро-вибрациями */
+/** Экран монеты в минималистичном стиле (Phantom / Apple / Clean TradingView):
+ *  - Header: аватарка монеты (32px), тикер, chevron выбора монеты, избранное, статус соединения
+ *  - Large Price & Change: крупная цена с табличными цифрами, лаконичный процентный чип
+ *  - Clean Secondary Stats: элегантная строка (Vol 24h · High · Low)
+ *  - Minimalist Timeframe Pills: 1m, 5m, 15m, 1h, 4h, 1d
+ *  - Seamless Chart: бесшовный контейнер со скруглением 16px
+ *  - Order Book / Trades: лаконичный сегмент-контрол
+ *  - Bottom Action Bar: цельные минималистичные кнопки Buy / Long и Sell / Short */
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Star,
-  TrendingUp,
-  TrendingDown,
   ChevronDown,
   ChevronLeft,
   Search,
   X,
   Zap,
   Flame,
-  BarChart2,
-  Activity,
-  ArrowUpDown,
-  SlidersHorizontal,
 } from 'lucide-react'
 import { useNav } from '../store/navigation'
 import { useMarket } from '../store/market'
 import { useMarketVersion, useTicker } from '../hooks/useTickerPrice'
 import { useTrading, priceOf } from '../store/trading'
-import { StatusDot, PctChip } from '../components/Atomics'
+import { StatusDot } from '../components/Atomics'
 import { CoinIcon } from '../components/CoinIcon'
-import { Seg, Chip, TapButton, Sheet } from '../components/ui'
+import { TapButton, Sheet } from '../components/ui'
 import { PriceChart } from '../components/PriceChart'
 import { OrderBook } from '../components/OrderBook'
 import { TradesTape } from '../components/TradesTape'
@@ -40,34 +35,9 @@ import { fmtPrice, fmtQty, fmtCompact, fmtUsd, fmtDate, fmtPct } from '../lib/fo
 import { D } from '../lib/engine'
 import { useSettings } from '../store/settings'
 import { buzz } from '../lib/haptics'
-import type { Interval, Ticker } from '../api/types'
-import type { ReactNode } from 'react'
-import type { Trade } from '../lib/engine/types'
+import type { Interval } from '../api/types'
 
 const INTERVALS: Interval[] = ['1m', '5m', '15m', '1h', '4h', '1d']
-
-/** Отсчёт до финансирования / закрытия свечи в формате HH:MM:SS (как в Hyperliquid). */
-function useFundingCountdown(): string {
-  const [countdown, setCountdown] = useState('00:49:43')
-  useEffect(() => {
-    // 8-часовой цикл финансирования
-    const cycleMs = 8 * 3600_000
-    const tick = () => {
-      const now = Date.now()
-      const rem = Math.max(0, cycleMs - (now % cycleMs))
-      const h = Math.floor(rem / 3600_000)
-      const m = Math.floor((rem % 3600_000) / 60_000)
-      const s = Math.floor((rem % 60_000) / 1000)
-      setCountdown(
-        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-      )
-    }
-    tick()
-    const timer = window.setInterval(tick, 1000)
-    return () => window.clearInterval(timer)
-  }, [])
-  return countdown
-}
 
 export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: () => void }) {
   const { t } = useI18n()
@@ -82,7 +52,8 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
   const dexAlias = market.aliases[symbol]
   const isDex = !!dexAlias
   const displayBase = baseOf(symbol)
-  const name = useCoinMeta(displayBase)?.name ?? (dexAlias ? dexAlias.baseName : '')
+  const meta = useCoinMeta(displayBase)
+  const coinName = meta?.name ?? (dexAlias ? dexAlias.baseName : '')
 
   const last = dexAlias
     ? market.dexPrices[`${dexAlias.chainId}:${dexAlias.pairAddress}`] ?? dexAlias.priceUsd
@@ -95,12 +66,10 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
   const [pickedPrice, setPickedPrice] = useState<string | null>(null)
   const [bookTab, setBookTab] = useState<'book' | 'trades'>('book')
   const [symbolPickerOpen, setSymbolPickerOpen] = useState(false)
-  const countdown = useFundingCountdown()
 
-  // Микро-анимация тика: подсветка текста и вспышка фона
+  // Мягкий цветовой импульс при тике
   const prevLastRef = useRef('')
   const [tickCls, setTickCls] = useState('')
-  const [flashBgCls, setFlashBgCls] = useState('')
 
   useEffect(() => {
     if (!last) return
@@ -109,12 +78,8 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
     if (!prev || prev === last) return
     const isUp = parseFloat(last) >= parseFloat(prev)
     setTickCls(isUp ? 'tick-up' : 'tick-down')
-    setFlashBgCls(isUp ? 'price-flash-bg-up' : 'price-flash-bg-down')
-    const t = window.setTimeout(() => {
-      setTickCls('')
-      setFlashBgCls('')
-    }, 650)
-    return () => window.clearTimeout(t)
+    const timer = window.setTimeout(() => setTickCls(''), 600)
+    return () => window.clearTimeout(timer)
   }, [last])
 
   // Подписка на график свечей
@@ -148,33 +113,15 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
     setOrderOpen(side)
   }
 
-  // Расчёт метрик терминала Axiom / Hyperliquid
-  const oraclePrice = useMemo(() => {
-    if (!last) return '—'
-    const p = parseFloat(last)
-    const delta = (pct >= 0 ? 0.0003 : -0.0003) * p
-    return fmtPrice(p + delta)
-  }, [last, pct])
-
-  const openInterest = useMemo(() => {
-    const quoteVol = parseFloat(ticker?.quoteVolume24h ?? '0')
-    const oi = quoteVol > 0 ? quoteVol * 0.65 : 3_310_000_000
-    return fmtCompact(oi)
-  }, [ticker])
-
-  const fundingRate = useMemo(() => {
-    const baseRate = pct >= 0 ? 0.0082 : -0.00267
-    const calculated = baseRate + pct * 0.0003
-    return `${calculated >= 0 ? '+' : ''}${calculated.toFixed(5)}%`
-  }, [pct])
+  const isFavorited = market.favorites.includes(symbol)
 
   const content = (
     <motion.div
-      initial={overlay ? { x: 40, opacity: 0 } : false}
+      initial={overlay ? { x: 30, opacity: 0 } : false}
       animate={{ x: 0, opacity: 1 }}
       exit={overlay ? { x: 30, opacity: 0 } : { opacity: 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-      className="absolute inset-0 flex flex-col bg-[#080b11] text-text"
+      className="absolute inset-0 flex flex-col bg-[#0a0d14] text-text"
       style={{ touchAction: 'pan-y' }}
       drag={overlay ? 'x' : false}
       dragConstraints={{ left: 0, right: 0 }}
@@ -183,45 +130,49 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
         if (info.offset.x > 120) onBack?.()
       }}
     >
-      {/* ══════════════ 1. TOP TERMINAL HEADER ══════════════ */}
+      {/* ══════════════ 1. HEADER (MINIMAL & CALM) ══════════════ */}
       <div
-        className="glass sticky top-0 z-30 border-b border-line/60 px-3.5 pb-2.5 transition-colors"
-        style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
+        className="glass sticky top-0 z-30 border-b border-line px-4 pb-3"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 10px)' }}
       >
-        <div className="flex items-center justify-between gap-2 min-h-[44px]">
-          {/* Left: Back button + Coin Avatar + Symbol Picker Dropdown */}
-          <div className="flex items-center gap-2 min-w-0">
+        {/* Top bar: Back, Coin selector, Star, Status */}
+        <div className="flex items-center justify-between gap-2 min-h-[40px]">
+          <div className="flex items-center gap-2.5 min-w-0">
             {overlay && onBack && (
               <button
                 onClick={() => {
                   buzz(6)
                   onBack()
                 }}
-                className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-white active:bg-surface-3"
+                className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-white transition-colors"
                 aria-label="back"
               >
                 <ChevronLeft size={22} />
               </button>
             )}
 
-            {/* Coin Avatar & Dropdown Selector */}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
+            {/* Coin Avatar & Symbol Dropdown Button */}
+            <button
               onClick={() => {
                 buzz(6)
                 setSymbolPickerOpen(true)
               }}
-              className="flex items-center gap-2 rounded-xl bg-surface-2/80 px-2.5 py-1.5 border border-line/80 hover:border-line-strong transition-all"
+              className="flex items-center gap-2.5 py-1 px-1.5 -ml-1.5 rounded-xl hover:bg-surface-2/60 transition-colors"
             >
-              <CoinIcon symbol={symbol} size={24} layoutId={`coin-${symbol}`} />
-              <div className="flex items-center gap-1">
-                <span className="font-extrabold text-[15px] tracking-tight text-white">{displayBase}</span>
-                <span className="text-[11px] font-semibold text-faint">/USDT</span>
-                <ChevronDown size={14} className="text-muted ml-0.5" />
+              <CoinIcon symbol={symbol} size={32} layoutId={`coin-${symbol}`} />
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-1.5 leading-none">
+                  <span className="font-bold text-[17px] tracking-tight text-white">{displayBase}</span>
+                  <span className="text-[12px] font-medium text-faint">/USDT</span>
+                  <ChevronDown size={14} className="text-muted ml-0.5" />
+                </div>
+                {coinName && (
+                  <span className="text-[11px] text-faint font-normal mt-0.5">{coinName}</span>
+                )}
               </div>
-            </motion.button>
+            </button>
 
-            {/* Favorite star */}
+            {/* Favorite Star */}
             {!isDex && (
               <button
                 onClick={() => {
@@ -233,7 +184,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
               >
                 <Star
                   size={16}
-                  className={market.favorites.includes(symbol) ? 'fill-warn text-warn' : 'text-faint'}
+                  className={isFavorited ? 'fill-warn text-warn' : 'text-faint hover:text-muted'}
                 />
               </button>
             )}
@@ -245,21 +196,20 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
           </div>
         </div>
 
-        {/* Price & 24h Change Row with Price Flasher */}
-        <div
-          className={`mt-1 flex items-baseline justify-between rounded-xl px-2 py-1 transition-all ${flashBgCls}`}
-        >
+        {/* Price & 24h Change Row */}
+        <div className="mt-3 flex items-baseline justify-between gap-3">
           <div className="flex items-baseline gap-2.5">
             <span
-              className={`text-[28px] font-black leading-tight tracking-tight tnum transition-colors ${tickCls}`}
+              className={`text-[32px] sm:text-[36px] font-semibold tracking-tight text-white tnum leading-tight transition-colors ${tickCls}`}
             >
               {last ? `$${fmtPrice(parseFloat(last))}` : '—'}
             </span>
+
             <div
-              className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[12px] font-bold tnum ${
+              className={`inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium tnum ${
                 pct >= 0
-                  ? 'bg-[#00d26a]/15 text-[#00d26a] border border-[#00d26a]/30'
-                  : 'bg-[#ff3b5c]/15 text-[#ff3b5c] border border-[#ff3b5c]/30'
+                  ? 'bg-[#00c076]/10 text-[#00c076]'
+                  : 'bg-[#ff3b5c]/10 text-[#ff3b5c]'
               }`}
             >
               {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
@@ -267,53 +217,43 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
           </div>
 
           {pct !== 0 && last && (
-            <span className="text-[12px] font-medium text-faint tnum">
+            <span className="text-[12px] font-normal text-muted tnum">
               {pct >= 0 ? '+' : '-'}${fmtPrice(Math.abs((parseFloat(last) * pct) / 100))}
             </span>
           )}
         </div>
 
-        {/* ══════════════ 2. PRO STATS BAR (Axiom / Hyperliquid) ══════════════ */}
-        <div className="mt-2 flex items-center gap-3 overflow-x-auto no-scrollbar border-t border-line/40 pt-2 text-[11px] tnum">
-          <TerminalStat label="Oracle Price" value={oraclePrice} />
-          <span className="h-3 w-px bg-line/80 shrink-0" />
-          <TerminalStat
-            label="24h Volume"
-            value={fmtCompact(ticker?.quoteVolume24h ?? '5120000000')}
-          />
-          <span className="h-3 w-px bg-line/80 shrink-0" />
-          <TerminalStat label="Open Interest" value={openInterest} />
-          <span className="h-3 w-px bg-line/80 shrink-0" />
-          <TerminalStat
-            label="Funding / Countdown"
-            value={
-              <span className="flex items-center gap-1.5">
-                <span className={fundingRate.startsWith('+') ? 'text-[#00d26a]' : 'text-[#ff3b5c]'}>
-                  {fundingRate}
-                </span>
-                <span className="text-white font-mono">{countdown}</span>
-              </span>
-            }
-          />
-          <span className="h-3 w-px bg-line/80 shrink-0" />
-          <TerminalStat
-            label="24h High"
-            value={fmtPrice(parseFloat(ticker?.high24h ?? '0'))}
-          />
-          <span className="h-3 w-px bg-line/80 shrink-0" />
-          <TerminalStat
-            label="24h Low"
-            value={fmtPrice(parseFloat(ticker?.low24h ?? '0'))}
-          />
+        {/* ══════════════ 2. CLEAN SECONDARY STATS ROW ══════════════ */}
+        <div className="mt-2.5 flex items-center gap-2.5 text-[11.5px] text-muted tnum overflow-x-auto no-scrollbar pt-1 border-t border-line">
+          <span className="whitespace-nowrap">
+            <span className="text-faint">Vol 24h: </span>
+            <span className="text-text font-medium">
+              ${fmtCompact(ticker?.quoteVolume24h ?? '5120000000')}
+            </span>
+          </span>
+          <span className="text-faint/50">·</span>
+          <span className="whitespace-nowrap">
+            <span className="text-faint">High: </span>
+            <span className="text-text font-medium">
+              ${ticker?.high24h ? fmtPrice(parseFloat(ticker.high24h)) : '—'}
+            </span>
+          </span>
+          <span className="text-faint/50">·</span>
+          <span className="whitespace-nowrap">
+            <span className="text-faint">Low: </span>
+            <span className="text-text font-medium">
+              ${ticker?.low24h ? fmtPrice(parseFloat(ticker.low24h)) : '—'}
+            </span>
+          </span>
         </div>
       </div>
 
       {/* ══════════════ SCROLLABLE CONTENT ══════════════ */}
-      <div className="scroll flex-1 px-3 pt-2" style={{ paddingBottom: 24 }}>
+      <div className="scroll flex-1 px-3 pt-2.5" style={{ paddingBottom: 24 }}>
         {/* Timeframe & Chart Style Switcher */}
-        <div className="flex items-center justify-between pb-1 pt-0.5">
-          {/* Timeframe Chips */}
-          <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-1 border border-line/60">
+        <div className="flex items-center justify-between pb-1.5 pt-0.5">
+          {/* Timeframe Minimal Pills */}
+          <div className="flex items-center gap-1">
             {INTERVALS.map((iv) => {
               const active = nav.interval === iv
               return (
@@ -323,9 +263,9 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
                     buzz(4)
                     nav.setInterval(iv)
                   }}
-                  className={`rounded-lg px-2.5 py-1 text-[11.5px] font-bold transition-all ${
+                  className={`rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors ${
                     active
-                      ? 'bg-surface-3 text-white shadow-sm'
+                      ? 'bg-surface-3 text-white'
                       : 'text-muted hover:text-white'
                   }`}
                 >
@@ -335,19 +275,18 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
             })}
           </div>
 
-          {/* Chart Type (Candles / Line) */}
-          <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-1 border border-line/60">
+          {/* Chart Style (Candles / Line) */}
+          <div className="flex items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
             <button
               onClick={() => {
                 buzz(4)
                 nav.setChartStyle('candles')
               }}
-              className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition-all ${
+              className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors ${
                 nav.chartStyle === 'candles'
-                  ? 'bg-surface-3 text-white shadow-sm'
+                  ? 'bg-surface-3 text-white'
                   : 'text-muted hover:text-white'
               }`}
-              title="Candlesticks"
             >
               Candles
             </button>
@@ -356,56 +295,52 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
                 buzz(4)
                 nav.setChartStyle('line')
               }}
-              className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition-all ${
+              className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors ${
                 nav.chartStyle === 'line'
-                  ? 'bg-surface-3 text-white shadow-sm'
+                  ? 'bg-surface-3 text-white'
                   : 'text-muted hover:text-white'
               }`}
-              title="Line Chart"
             >
               Line
             </button>
           </div>
         </div>
 
-        {/* Axiom Interactive OHLC Banner */}
+        {/* OHLC Bar */}
         {latestKline && !isDex && (
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 px-1 text-[10.5px] font-mono text-faint tnum">
-            <span className="font-bold text-muted">{displayBase}-USD</span>
-            <span>·</span>
-            <span>O: <b className="font-normal text-text">${fmtPrice(latestKline.open)}</b></span>
-            <span>H: <b className="font-normal text-text">${fmtPrice(latestKline.high)}</b></span>
-            <span>L: <b className="font-normal text-text">${fmtPrice(latestKline.low)}</b></span>
-            <span>C: <b className="font-normal text-text">${fmtPrice(latestKline.close)}</b></span>
-            <span>Vol: <b className="font-normal text-text">{fmtCompact(latestKline.volume)}</b></span>
+          <div className="mt-0.5 mb-1 flex flex-wrap items-center gap-x-2 text-[10.5px] font-mono text-faint tnum px-0.5">
+            <span>O: <span className="text-muted">${fmtPrice(latestKline.open)}</span></span>
+            <span>H: <span className="text-muted">${fmtPrice(latestKline.high)}</span></span>
+            <span>L: <span className="text-muted">${fmtPrice(latestKline.low)}</span></span>
+            <span>C: <span className="text-muted">${fmtPrice(latestKline.close)}</span></span>
           </div>
         )}
 
-        {/* ── TradingView Lightweight Chart ── */}
-        <div className="mt-1 overflow-hidden rounded-2xl border border-line/80 bg-[#0e121a]">
-          <div className="h-[290px] px-1 pt-1.5">
+        {/* ── Seamless Minimalist Chart Container ── */}
+        <div className="overflow-hidden rounded-[16px] bg-surface border border-line">
+          <div className="h-[290px] px-1 pt-1">
             {klines && klines.length > 0 ? (
               <PriceChart symbol={symbol} klines={klines} />
             ) : (
-              <div className="flex h-full items-center justify-center gap-2 text-faint">
+              <div className="flex h-full items-center justify-center text-faint">
                 <span className="skel h-3 w-28" />
               </div>
             )}
           </div>
         </div>
 
-        {/* ── Order Book & Trades Tape Tabs (Axiom Style) ── */}
-        <div className="mt-2.5 overflow-hidden rounded-2xl border border-line/80 bg-[#0e121a]">
-          <div className="flex items-center justify-between border-b border-line/60 px-3 py-2">
-            <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-1">
+        {/* ── Order Book & Trades Tape Tabs ── */}
+        <div className="mt-3 overflow-hidden rounded-[16px] bg-surface border border-line">
+          <div className="flex items-center justify-between border-b border-line px-3.5 py-2">
+            <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-0.5">
               <button
                 onClick={() => {
                   buzz(4)
                   setBookTab('book')
                 }}
-                className={`rounded-lg px-3 py-1 text-[12px] font-bold transition-all ${
+                className={`rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
                   bookTab === 'book'
-                    ? 'bg-surface-3 text-white shadow-sm'
+                    ? 'bg-surface-3 text-white'
                     : 'text-muted hover:text-white'
                 }`}
               >
@@ -416,9 +351,9 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
                   buzz(4)
                   setBookTab('trades')
                 }}
-                className={`rounded-lg px-3 py-1 text-[12px] font-bold transition-all ${
+                className={`rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
                   bookTab === 'trades'
-                    ? 'bg-surface-3 text-white shadow-sm'
+                    ? 'bg-surface-3 text-white'
                     : 'text-muted hover:text-white'
                 }`}
               >
@@ -426,8 +361,8 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
               </button>
             </div>
 
-            <span className="text-[10px] text-faint tnum">
-              {bookTab === 'book' ? 'Tap level to set limit price' : 'Real-time aggregated trades'}
+            <span className="text-[11px] text-faint tnum">
+              {bookTab === 'book' ? 'Tap level to set price' : 'Real-time trades'}
             </span>
           </div>
 
@@ -440,7 +375,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
           </div>
         </div>
 
-        {/* ── Positions / Orders / History Bottom Panel ── */}
+        {/* ── Positions / Orders / Trades Bottom Panel ── */}
         <TerminalBottomPanel
           symbol={symbol}
           rend={version}
@@ -450,41 +385,41 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
           }}
         />
 
-        <p className="px-5 pt-4 text-center text-[10.5px] text-faint">{t('app.disclaimer')}</p>
+        <p className="px-5 pt-4 text-center text-[11px] text-faint">{t('app.disclaimer')}</p>
       </div>
 
-      {/* ══════════════ 3. STICKY BOTTOM ACTION BAR ══════════════ */}
+      {/* ══════════════ 3. MINIMAL SOLID BOTTOM ACTION BAR ══════════════ */}
       <div
-        className="glass sticky bottom-0 z-20 flex gap-2.5 px-4 pt-3 border-t border-line/60"
+        className="glass sticky bottom-0 z-20 flex gap-2.5 px-4 pt-3 border-t border-line"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
       >
         <TapButton
-          className="flex-1 h-12 rounded-2xl font-black text-[15px] bg-[#00d26a] text-[#051a0e] terminal-glow-long"
+          className="flex-1 h-12 rounded-xl font-semibold text-[15px] bg-[#00c076] text-[#032014]"
           onClick={() => {
             buzz(10)
             setPickedPrice(null)
             setOrderOpen('buy')
           }}
         >
-          <Zap size={17} className="fill-current" />
+          <Zap size={16} className="fill-current" />
           <span>Long {displayBase}</span>
           {settings.leverageEnabled && (
-            <span className="rounded bg-[#051a0e]/20 px-1.5 py-0.5 text-[11px] font-bold">20x</span>
+            <span className="rounded bg-black/15 px-1.5 py-0.5 text-[11px] font-semibold">20x</span>
           )}
         </TapButton>
 
         <TapButton
-          className="flex-1 h-12 rounded-2xl font-black text-[15px] bg-[#ff3b5c] text-white terminal-glow-short"
+          className="flex-1 h-12 rounded-xl font-semibold text-[15px] bg-[#ff3b5c] text-white"
           onClick={() => {
             buzz(10)
             setPickedPrice(null)
             setOrderOpen('sell')
           }}
         >
-          <Flame size={17} className="fill-current" />
+          <Flame size={16} className="fill-current" />
           <span>Short {displayBase}</span>
           {settings.leverageEnabled && (
-            <span className="rounded bg-black/20 px-1.5 py-0.5 text-[11px] font-bold">20x</span>
+            <span className="rounded bg-black/25 px-1.5 py-0.5 text-[11px] font-semibold">20x</span>
           )}
         </TapButton>
       </div>
@@ -503,7 +438,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
         )}
       </AnimatePresence>
 
-      {/* Quick Symbol Switcher Modal / Sheet */}
+      {/* Quick Symbol Switcher Modal */}
       <SymbolPickerSheet
         open={symbolPickerOpen}
         onOpenChange={setSymbolPickerOpen}
@@ -532,17 +467,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
   )
 }
 
-/** Вспомогательная ячейка метрики в Top Stats Bar */
-function TerminalStat({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex flex-col shrink-0 leading-tight">
-      <span className="text-[9px] font-semibold uppercase tracking-wider text-faint">{label}</span>
-      <span className="whitespace-nowrap text-[11.5px] font-bold text-text">{value}</span>
-    </div>
-  )
-}
-
-/** Нижняя панель терминала: Позиции | Ордера | Сделки */
+/** Нижняя панель: Позиции | Ордера | Сделки */
 function TerminalBottomPanel({
   symbol,
   rend,
@@ -562,23 +487,23 @@ function TerminalBottomPanel({
   const ordersCount = (snap?.orders ?? []).filter((o) => o.status === 'open' && o.symbol === symbol).length
 
   return (
-    <div className="mt-2.5 overflow-hidden rounded-2xl border border-line/80 bg-[#0e121a]">
-      <div className="border-b border-line/60 px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-1">
+    <div className="mt-3 overflow-hidden rounded-[16px] bg-surface border border-line">
+      <div className="border-b border-line px-3.5 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-0.5">
           <button
             onClick={() => {
               buzz(4)
               setTab('positions')
             }}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-bold transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
               tab === 'positions'
-                ? 'bg-surface-3 text-white shadow-sm'
+                ? 'bg-surface-3 text-white'
                 : 'text-muted hover:text-white'
             }`}
           >
             <span>{t('panel.positions')}</span>
             {posCount > 0 && (
-              <span className="rounded-full bg-[#00d26a] px-1.5 py-0.2 text-[10px] text-[#051a0e] font-black">
+              <span className="rounded-full bg-[#00c076] px-1.5 py-0.2 text-[10px] text-[#032014] font-bold">
                 {posCount}
               </span>
             )}
@@ -588,15 +513,15 @@ function TerminalBottomPanel({
               buzz(4)
               setTab('orders')
             }}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-bold transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
               tab === 'orders'
-                ? 'bg-surface-3 text-white shadow-sm'
+                ? 'bg-surface-3 text-white'
                 : 'text-muted hover:text-white'
             }`}
           >
             <span>{t('panel.orders')}</span>
             {ordersCount > 0 && (
-              <span className="rounded-full bg-accent px-1.5 py-0.2 text-[10px] text-white font-black">
+              <span className="rounded-full bg-accent px-1.5 py-0.2 text-[10px] text-white font-bold">
                 {ordersCount}
               </span>
             )}
@@ -606,9 +531,9 @@ function TerminalBottomPanel({
               buzz(4)
               setTab('trades')
             }}
-            className={`rounded-lg px-3 py-1 text-[12px] font-bold transition-all ${
+            className={`rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
               tab === 'trades'
-                ? 'bg-surface-3 text-white shadow-sm'
+                ? 'bg-surface-3 text-white'
                 : 'text-muted hover:text-white'
             }`}
           >
@@ -628,7 +553,7 @@ function TerminalBottomPanel({
   )
 }
 
-/** Детальный просмотр позиций в стиле Axiom */
+/** Детальный просмотр позиций */
 function TerminalPositionsView({ symbol, onSell }: { symbol: string; onSell: () => void }) {
   const { t } = useI18n()
   const trading = useTrading()
@@ -663,28 +588,28 @@ function TerminalPositionsView({ symbol, onSell }: { symbol: string; onSell: () 
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       {/* Фьючерсная позиция */}
       {settings.leverageEnabled && pos && (
-        <div className="rounded-xl bg-surface-2 p-3 border border-line/60">
-          <div className="flex items-center justify-between pb-2 border-b border-line/40">
+        <div className="rounded-xl bg-surface-2 p-3 border border-line">
+          <div className="flex items-center justify-between pb-2 border-b border-line">
             <div className="flex items-center gap-2">
               <span
-                className={`rounded px-1.5 py-0.5 text-[11px] font-black uppercase ${
+                className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
                   pos.side === 'long'
-                    ? 'bg-[#00d26a]/15 text-[#00d26a] border border-[#00d26a]/30'
-                    : 'bg-[#ff3b5c]/15 text-[#ff3b5c] border border-[#ff3b5c]/30'
+                    ? 'bg-[#00c076]/10 text-[#00c076]'
+                    : 'bg-[#ff3b5c]/10 text-[#ff3b5c]'
                 }`}
               >
                 {pos.leverage}x {pos.side}
               </span>
-              <span className="font-bold text-[13px]">{baseOf(symbol)}-PERP</span>
+              <span className="font-semibold text-[13px]">{baseOf(symbol)}-PERP</span>
             </div>
 
             <div className="text-right">
               <div
-                className={`text-[13px] font-bold tnum ${
-                  posPnl.gte(0) ? 'text-[#00d26a]' : 'text-[#ff3b5c]'
+                className={`text-[13px] font-semibold tnum ${
+                  posPnl.gte(0) ? 'text-[#00c076]' : 'text-[#ff3b5c]'
                 }`}
               >
                 {fmtUsd(posPnl.toString(), { sign: true })} ({fmtPct(pnlPct)})
@@ -695,23 +620,23 @@ function TerminalPositionsView({ symbol, onSell }: { symbol: string; onSell: () 
           <div className="mt-2.5 grid grid-cols-3 gap-2 text-[11px] tnum">
             <div>
               <span className="text-faint text-[10px] block">Size</span>
-              <span className="font-semibold text-text">{fmtQty(posQty.toString())}</span>
+              <span className="font-medium text-text">{fmtQty(posQty.toString())}</span>
             </div>
             <div>
               <span className="text-faint text-[10px] block">Entry Price</span>
-              <span className="font-semibold text-text">${fmtPrice(pos.entryPrice)}</span>
+              <span className="font-medium text-text">${fmtPrice(pos.entryPrice)}</span>
             </div>
             <div>
               <span className="text-faint text-[10px] block">Mark Price</span>
-              <span className="font-semibold text-text">${fmtPrice(price.toString())}</span>
+              <span className="font-medium text-text">${fmtPrice(price.toString())}</span>
             </div>
             <div>
               <span className="text-faint text-[10px] block">Liq Price</span>
-              <span className="font-bold text-warn">${fmtPrice(pos.liqPrice)}</span>
+              <span className="font-semibold text-warn">${fmtPrice(pos.liqPrice)}</span>
             </div>
             <div>
               <span className="text-faint text-[10px] block">Margin</span>
-              <span className="font-semibold text-text">{fmtUsd(pos.margin)}</span>
+              <span className="font-medium text-text">{fmtUsd(pos.margin)}</span>
             </div>
             <div className="flex items-end justify-end">
               <button
@@ -719,7 +644,7 @@ function TerminalPositionsView({ symbol, onSell }: { symbol: string; onSell: () 
                   buzz(8)
                   trading.closePosition(pos.id)
                 }}
-                className="rounded-lg bg-surface-3 px-3 py-1 font-bold text-white text-[11px] hover:bg-down/20 hover:text-down transition-colors"
+                className="rounded-lg bg-surface-3 px-2.5 py-1 font-medium text-white text-[11px] hover:bg-down/20 hover:text-down transition-colors"
               >
                 Close
               </button>
@@ -730,26 +655,26 @@ function TerminalPositionsView({ symbol, onSell }: { symbol: string; onSell: () 
 
       {/* Спотовый холдинг */}
       {holding && holdingQty.gt(D('0.00000001')) && (
-        <div className="rounded-xl bg-surface-2 p-3 border border-line/60">
+        <div className="rounded-xl bg-surface-2 p-3 border border-line">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-medium text-faint">Spot · {baseOf(symbol)}</div>
-              <div className="text-[13px] font-bold tnum">
+              <div className="text-[11px] text-faint">Spot · {baseOf(symbol)}</div>
+              <div className="text-[13px] font-semibold tnum">
                 {fmtQty(holdingQty.toString())} (${fmtPrice(holdingQty.mul(price).toString())})
               </div>
               <div className="text-[10px] text-faint tnum">avg ${fmtPrice(holding.avgPrice)}</div>
             </div>
             <div className="flex items-center gap-2">
               <span
-                className={`text-[12px] font-bold tnum ${
-                  holdingPnl.gte(0) ? 'text-[#00d26a]' : 'text-[#ff3b5c]'
+                className={`text-[12px] font-semibold tnum ${
+                  holdingPnl.gte(0) ? 'text-[#00c076]' : 'text-[#ff3b5c]'
                 }`}
               >
                 {fmtUsd(holdingPnl.toString(), { sign: true })}
               </span>
               <button
                 onClick={onSell}
-                className="rounded-lg bg-surface-3 px-3 py-1 text-[11px] font-bold text-muted hover:text-white"
+                className="rounded-lg bg-surface-3 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-white transition-colors"
               >
                 Sell
               </button>
@@ -782,20 +707,20 @@ function TerminalOrdersView({ symbol }: { symbol: string }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex items-center justify-between rounded-xl bg-surface-2 p-2.5 border border-line/60"
+            className="flex items-center justify-between rounded-xl bg-surface-2 p-2.5 border border-line"
           >
             <div>
               <div className="flex items-center gap-1.5">
                 <span
-                  className={`rounded px-1.5 py-0.2 text-[10px] font-black uppercase ${
+                  className={`rounded px-1.5 py-0.2 text-[10px] font-bold uppercase ${
                     o.side === 'buy'
-                      ? 'bg-[#00d26a]/15 text-[#00d26a]'
-                      : 'bg-[#ff3b5c]/15 text-[#ff3b5c]'
+                      ? 'bg-[#00c076]/10 text-[#00c076]'
+                      : 'bg-[#ff3b5c]/10 text-[#ff3b5c]'
                   }`}
                 >
                   {o.side}
                 </span>
-                <span className="text-[12px] font-bold uppercase">{o.kind}</span>
+                <span className="text-[12px] font-semibold uppercase">{o.kind}</span>
                 {o.ocoId && <span className="text-[10px] text-faint">OCO</span>}
               </div>
               <div className="mt-1 text-[11px] text-faint tnum">
@@ -807,7 +732,7 @@ function TerminalOrdersView({ symbol }: { symbol: string }) {
                 buzz(6)
                 trading.cancelOrder(o.id)
               }}
-              className="rounded-lg bg-surface-3 px-2.5 py-1 text-[11px] font-bold text-muted hover:text-down transition-colors"
+              className="rounded-lg bg-surface-3 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-down transition-colors"
             >
               Cancel
             </button>
@@ -837,12 +762,12 @@ function TerminalTradesView({ symbol }: { symbol: string }) {
       {rows.map((tr) => (
         <div
           key={tr.id}
-          className="flex items-center justify-between rounded-lg bg-surface-2/60 px-2.5 py-2 text-[11.5px] border border-line/40 tnum"
+          className="flex items-center justify-between rounded-lg bg-surface-2/60 px-2.5 py-2 text-[11.5px] border border-line/50 tnum"
         >
           <div>
             <span
               className={`mr-1.5 font-bold uppercase ${
-                tr.side === 'buy' ? 'text-[#00d26a]' : 'text-[#ff3b5c]'
+                tr.side === 'buy' ? 'text-[#00c076]' : 'text-[#ff3b5c]'
               }`}
             >
               {tr.side}
@@ -851,11 +776,11 @@ function TerminalTradesView({ symbol }: { symbol: string }) {
             <span className="text-faint text-[10px] ml-1.5">@ ${fmtPrice(tr.price)}</span>
           </div>
           <div className="text-right">
-            <span className="text-muted font-semibold">{fmtUsd(tr.quoteTotal)}</span>
+            <span className="text-muted font-medium">{fmtUsd(tr.quoteTotal)}</span>
             {typeof tr.pnl === 'string' && (
               <span
-                className={`ml-1.5 font-bold ${
-                  D(tr.pnl).gte(0) ? 'text-[#00d26a]' : 'text-[#ff3b5c]'
+                className={`ml-1.5 font-semibold ${
+                  D(tr.pnl).gte(0) ? 'text-[#00c076]' : 'text-[#ff3b5c]'
                 }`}
               >
                 {fmtUsd(tr.pnl, { sign: true })}
@@ -894,12 +819,12 @@ function SymbolPickerSheet({
     <Sheet open={open} onOpenChange={onOpenChange} maxHeight="85dvh" title="Select Market">
       <div className="flex flex-col gap-3 pb-6">
         {/* Search input */}
-        <div className="relative flex items-center rounded-2xl bg-surface-2 px-3.5 py-2.5 border border-line/80">
+        <div className="relative flex items-center rounded-xl bg-surface-2 px-3 py-2 border border-line">
           <Search size={16} className="text-faint mr-2 shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search symbol (e.g. BTC, ETH)..."
+            placeholder="Search coin (e.g. BTC, ETH)..."
             className="w-full bg-transparent text-[14px] text-white outline-none placeholder:text-faint"
             autoFocus
           />
@@ -919,23 +844,23 @@ function SymbolPickerSheet({
               <button
                 key={t.symbol}
                 onClick={() => onSelect(t.symbol)}
-                className={`flex items-center justify-between py-2.5 px-2 hover:bg-surface-2/60 transition-colors ${
+                className={`flex items-center justify-between py-2.5 px-2 hover:bg-surface-2/60 transition-colors rounded-lg ${
                   isCurrent ? 'bg-surface-3/50' : ''
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   <CoinIcon symbol={t.symbol} size={28} />
                   <div className="text-left">
-                    <div className="font-extrabold text-[14px] text-white leading-tight">{base}</div>
-                    <div className="text-[11px] text-faint">USDT · Vol {fmtCompact(t.quoteVolume24h)}</div>
+                    <div className="font-semibold text-[14px] text-white leading-tight">{base}</div>
+                    <div className="text-[11px] text-faint">USDT · Vol ${fmtCompact(t.quoteVolume24h)}</div>
                   </div>
                 </div>
 
                 <div className="text-right tnum">
-                  <div className="font-bold text-[13px] text-white">${fmtPrice(t.last)}</div>
+                  <div className="font-medium text-[13px] text-white">${fmtPrice(t.last)}</div>
                   <div
-                    className={`text-[11px] font-bold ${
-                      t.changePct24h >= 0 ? 'text-[#00d26a]' : 'text-[#ff3b5c]'
+                    className={`text-[11px] font-medium ${
+                      t.changePct24h >= 0 ? 'text-[#00c076]' : 'text-[#ff3b5c]'
                     }`}
                   >
                     {t.changePct24h >= 0 ? '+' : ''}{t.changePct24h.toFixed(2)}%

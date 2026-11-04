@@ -1,29 +1,28 @@
 /** Лёгкие заглушки-скелетоны, Header, StatusDot, PctChip, Sparkline. */
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { ChevronLeft } from 'lucide-react'
-import { Chip } from './ui'
 import { useI18n } from '../lib/i18n'
 import { fmtPct } from '../lib/format'
 import { useMarket } from '../store/market'
 
 export function Skeleton({ className }: { className?: string }) {
-  return <span className={`skel inline-block ${className ?? ''}`} />
+  return <span className={`skel inline-block rounded-md ${className ?? ''}`} />
 }
 
 export function RowsSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <div className="flex flex-col gap-2 px-4 pt-1">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <Skeleton className="h-9 w-9 shrink-0" />
-          <div className="flex-1">
-            <Skeleton className="h-3 w-24" />
-            <div className="h-2" />
+        <div key={i} className="flex items-center gap-3 py-2">
+          <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-3.5 w-24" />
             <Skeleton className="h-2.5 w-16" />
           </div>
-          <div className="text-right">
-            <Skeleton className="h-3 w-20" />
+          <div className="text-right space-y-1.5 flex flex-col items-end">
+            <Skeleton className="h-3.5 w-16" />
+            <Skeleton className="h-2.5 w-12" />
           </div>
         </div>
       ))}
@@ -42,15 +41,16 @@ export function EmptyState({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center px-10 py-14 text-center"
+      transition={{ duration: 0.25 }}
+      className="flex flex-col items-center px-8 py-16 text-center select-none"
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface3 text-muted">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04] text-muted border border-white/[0.04]">
         {icon}
       </div>
-      <div className="mt-4 text-[15px] font-semibold">{title}</div>
-      {hint && <div className="mt-1 text-[13px] leading-snug text-faint">{hint}</div>}
+      <div className="mt-3.5 text-[15px] font-semibold text-text">{title}</div>
+      {hint && <div className="mt-1 text-[13px] leading-snug text-faint max-w-xs">{hint}</div>}
     </motion.div>
   )
 }
@@ -67,32 +67,33 @@ export function Header({
   subtitle?: React.ReactNode
 }) {
   return (
-    <div
-      className="glass sticky top-0 z-30 px-4 pb-2"
+    <header
+      className="sticky top-0 z-30 border-b border-white/[0.04] bg-surface/80 px-4 pb-2.5 select-none"
       style={{
-        paddingTop: 'max(env(safe-area-inset-top), 10px)',
-        borderBottom: '1px solid var(--line)',
+        paddingTop: 'max(env(safe-area-inset-top), 8px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        backdropFilter: 'blur(20px)',
       }}
     >
-      <div className="flex min-h-11 items-center gap-2">
+      <div className="flex min-h-11 items-center gap-2.5">
         {onBack && (
           <button
             onClick={onBack}
-            className="-ml-2 flex h-11 w-11 items-center justify-center rounded-full text-muted active:bg-surface3"
+            className="-ml-1.5 flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:text-text active:bg-white/[0.06]"
             aria-label="back"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={20} strokeWidth={1.75} />
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[19px] font-bold leading-6">{title}</div>
+          <div className="truncate text-[18px] font-semibold tracking-tight text-text leading-tight">{title}</div>
           {subtitle && (
-            <div className="truncate text-[12px] leading-4 text-faint">{subtitle}</div>
+            <div className="truncate text-[11px] leading-tight text-faint mt-0.5">{subtitle}</div>
           )}
         </div>
-        <div className="flex items-center gap-2">{right}</div>
+        {right && <div className="flex items-center gap-2">{right}</div>}
       </div>
-    </div>
+    </header>
   )
 }
 
@@ -100,89 +101,85 @@ export function Header({
 export function StatusDot() {
   const { t } = useI18n()
   const conn = useMarket((s) => s.conn)
-  const providerId = useMarket((s) => s.providerId)
+  const isLive = conn === 'live'
+  const isWarn = conn === 'reconnecting' || conn === 'connecting'
   const label =
     conn === 'live'
-      ? t('conn.live') + (providerId ? ` · ${providerId}` : '')
+      ? t('conn.live')
       : conn === 'reconnecting'
         ? t('conn.reconnecting')
         : conn === 'connecting'
           ? t('conn.connecting')
           : t('conn.offline')
-  const color =
-    conn === 'live' ? 'var(--up)' : conn === 'reconnecting' ? 'var(--warn)' : 'var(--down)'
 
   return (
     <div
-      className="flex items-center gap-1.5 rounded-full px-2.5 py-1"
-      style={{ background: `color-mix(in srgb, ${color} 10%, transparent)` }}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-white/[0.04] border border-white/[0.04] select-none"
       title={label}
     >
-      <motion.span
-        className="block h-[6px] w-[6px] rounded-full"
-        style={{ background: color, boxShadow: `0 0 6px ${color}` }}
-        animate={conn === 'live' ? { opacity: [1, 0.3, 1], scale: [1, 0.85, 1] } : { opacity: 1 }}
-        transition={
-          conn === 'live'
-            ? { repeat: Infinity, duration: 2, ease: 'easeInOut' }
-            : undefined
-        }
-      />
-      <span className="text-[10.5px] font-medium tnum" style={{ color }}>{label}</span>
+      <span className="relative flex h-1.5 w-1.5">
+        {isLive && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-up opacity-75" />
+        )}
+        <span
+          className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
+            isLive ? 'bg-up' : isWarn ? 'bg-warn' : 'bg-down'
+          }`}
+        />
+      </span>
+      <span className="text-[11px] font-medium tracking-tight text-faint tnum">
+        {label}
+      </span>
     </div>
   )
 }
 
-/** Изменение за 24ч с цветом и стрелкой. */
+/** Изменение за 24ч с минималистичным фоном и чистой типографикой. */
 export function PctChip({ pct, className }: { pct: number; className?: string }) {
+  const isUp = pct >= 0
   return (
-    <AnimatePresence mode="popLayout" initial={false}>
-      <motion.span
-        key={pct.toFixed(2)}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className={`inline-flex ${className ?? ''}`}
-      >
-        <Chip color={pct >= 0 ? 'up' : 'down'}>
-          <span className="mr-0.5" style={{ fontSize: '8px' }}>{pct >= 0 ? '▲' : '▼'}</span>
-          {fmtPct(pct)}
-        </Chip>
-      </motion.span>
-    </AnimatePresence>
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded-[5px] text-[11px] font-medium tnum ${
+        isUp ? 'bg-up/10 text-up' : 'bg-down/10 text-down'
+      } ${className ?? ''}`}
+    >
+      {fmtPct(pct)}
+    </span>
   )
 }
 
-/** Мини-спарклайн (path из стора). */
+/** Чистый лёгкий спарклайн с гладкой линией и мягким градиентом. */
 export function Sparkline({ path, up }: { path?: string; up: boolean }) {
-  if (!path) return <Skeleton className="h-[28px] w-[68px]" />
+  const gradId = React.useId()
+  if (!path) return <Skeleton className="h-[26px] w-[64px]" />
   const color = up ? 'var(--up)' : 'var(--down)'
-  const id = `spark-${up ? 'up' : 'dn'}`
+  const areaPath = `${path} L64,26 L0,26 Z`
+
   return (
-    <motion.svg
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      width="68"
-      height="28"
+    <svg
+      width="64"
+      height="26"
       viewBox="0 0 64 26"
-      className="shrink-0"
+      className="shrink-0 overflow-hidden"
     >
       <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.15" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.0" />
         </linearGradient>
       </defs>
-      <motion.path
+      <path
+        d={areaPath}
+        fill={`url(#${gradId})`}
+      />
+      <path
         d={path}
         fill="none"
         stroke={color}
-        strokeWidth="1.8"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
       />
-    </motion.svg>
+    </svg>
   )
 }

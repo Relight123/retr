@@ -2,55 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ═══════════════ Дизайн-токены ═══════════════ */
+/* ═══════════════ Дизайн-токены (Minimalist Aesthetic) ═══════════════ */
 :root,
 [data-theme='dark'] {
-  --bg: #080b11;
-  --surface: #0f1218;
-  --surface-2: #151a23;
-  --surface-3: #1a2030;
-  --line: rgba(255, 255, 255, 0.06);
-  --line-strong: rgba(235, 240, 255, 0.14);
-  --text: #e8ecf6;
-  --muted: #9aa3b8;
-  --faint: #5e6678;
-  --accent: #5b7bfe;
-  --accent-2: #00d1b2;
-  --accent-soft: rgba(91, 123, 254, 0.14);
-  --up: #00d26a;
+  --bg: #0a0d14;
+  --surface: #10141e;
+  --surface-2: #161b28;
+  --surface-3: #1e2436;
+  --line: rgba(255, 255, 255, 0.05);
+  --line-strong: rgba(255, 255, 255, 0.1);
+  --text: #f0f3fa;
+  --muted: #8b95a8;
+  --faint: #525a6c;
+  --accent: #4e75ff;
+  --accent-2: #00c076;
+  --accent-soft: rgba(78, 117, 255, 0.1);
+  --up: #00c076;
   --down: #ff3b5c;
-  --warn: #efa62e;
-  --glass: rgba(8, 11, 17, 0.72);
-  --glass-strong: rgba(8, 11, 17, 0.88);
-  --skeleton-a: rgba(235, 240, 255, 0.05);
-  --skeleton-b: rgba(235, 240, 255, 0.12);
-  --shadow-card: 0 12px 32px -16px rgba(0, 0, 0, 0.55);
-  --shadow-float: 0 18px 44px -18px rgba(0, 0, 0, 0.7);
-  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --warn: #e59e2a;
+  --glass: rgba(10, 13, 20, 0.75);
+  --glass-strong: rgba(10, 13, 20, 0.92);
+  --skeleton-a: rgba(255, 255, 255, 0.03);
+  --skeleton-b: rgba(255, 255, 255, 0.07);
+  --shadow-card: 0 4px 16px -2px rgba(0, 0, 0, 0.25);
+  --shadow-float: 0 8px 30px -4px rgba(0, 0, 0, 0.45);
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 [data-theme='light'] {
-  --bg: #f0f2f8;
+  --bg: #f4f6fa;
   --surface: #ffffff;
-  --surface-2: #f5f7fc;
-  --surface-3: #eaeef7;
-  --line: rgba(10, 15, 35, 0.08);
-  --line-strong: rgba(10, 15, 35, 0.14);
-  --text: #0d1024;
-  --muted: #5a6276;
-  --faint: #96a0b4;
-  --accent: #4a68f0;
-  --accent-2: #00b89e;
-  --accent-soft: rgba(74, 104, 240, 0.10);
-  --up: #00b85c;
+  --surface-2: #f0f2f7;
+  --surface-3: #e5e8f0;
+  --line: rgba(10, 15, 35, 0.06);
+  --line-strong: rgba(10, 15, 35, 0.12);
+  --text: #0e121e;
+  --muted: #60687a;
+  --faint: #929bb0;
+  --accent: #4e75ff;
+  --accent-2: #00c076;
+  --accent-soft: rgba(78, 117, 255, 0.08);
+  --up: #00a86b;
   --down: #f03050;
-  --warn: #de9112;
-  --glass: rgba(255, 255, 255, 0.68);
-  --glass-strong: rgba(255, 255, 255, 0.86);
-  --skeleton-a: rgba(10, 15, 35, 0.05);
-  --skeleton-b: rgba(10, 15, 35, 0.12);
-  --shadow-card: 0 10px 30px -18px rgba(16, 20, 42, 0.30);
-  --shadow-float: 0 16px 40px -20px rgba(16, 20, 42, 0.35);
+  --warn: #d98a10;
+  --glass: rgba(255, 255, 255, 0.75);
+  --glass-strong: rgba(255, 255, 255, 0.90);
+  --skeleton-a: rgba(10, 15, 35, 0.04);
+  --skeleton-b: rgba(10, 15, 35, 0.09);
+  --shadow-card: 0 4px 16px -4px rgba(16, 20, 42, 0.12);
+  --shadow-float: 0 10px 28px -6px rgba(16, 20, 42, 0.18);
 }
 
 /* Плавный кроссфейд темы через View Transitions API */
@@ -80,7 +80,6 @@ body {
   font-family: 'Inter Variable', Inter, system-ui, -apple-system, sans-serif;
   font-size: 15px;
   line-height: 1.45;
-  /* iOS: запрещаем зум по двойному тапу / pinch страницы */
   touch-action: manipulation;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -107,7 +106,6 @@ textarea {
   -webkit-user-select: auto;
 }
 
-/* iOS авто-зум: input не меньше 16px */
 input,
 select,
 textarea {
@@ -130,52 +128,48 @@ img {
   font-feature-settings: 'tnum';
 }
 
-/* Вспышка цены при тике: импульс цвета + микро-масштаб */
+/* Спокойная индикация тика: чистый цветовой переход без скачков масштаба */
 .tick-up {
-  animation: tickFlashUp 0.55s ease-out;
+  animation: tickFlashUp 0.6s ease-out;
 }
 .tick-down {
-  animation: tickFlashDown 0.55s ease-out;
+  animation: tickFlashDown 0.6s ease-out;
 }
 @keyframes tickFlashUp {
   0% {
     color: var(--up);
-    transform: scale(1.04);
   }
   100% {
     color: var(--text);
-    transform: scale(1);
   }
 }
 @keyframes tickFlashDown {
   0% {
     color: var(--down);
-    transform: scale(1.04);
   }
   100% {
     color: var(--text);
-    transform: scale(1);
   }
 }
 
-/* ── Glow утилиты ── */
+/* ── Спокойные подсветки (без кислотных неоновых ореолов) ── */
 .glow-up {
-  box-shadow: 0 0 18px rgba(0, 210, 106, 0.18), 0 0 4px rgba(0, 210, 106, 0.10);
+  box-shadow: 0 2px 10px rgba(0, 192, 118, 0.15);
 }
 .glow-down {
-  box-shadow: 0 0 18px rgba(255, 59, 92, 0.18), 0 0 4px rgba(255, 59, 92, 0.10);
+  box-shadow: 0 2px 10px rgba(255, 59, 92, 0.15);
 }
 
-/* ── Price flash: фоновый пульс при изменении цены ── */
+/* ── Фоновый пульс изменения цены (тонкий и ненавязчивый) ── */
 .price-flash-up {
-  animation: priceFlashUp 0.6s ease-out;
+  animation: priceFlashUp 0.5s ease-out;
 }
 .price-flash-down {
-  animation: priceFlashDown 0.6s ease-out;
+  animation: priceFlashDown 0.5s ease-out;
 }
 @keyframes priceFlashUp {
   0% {
-    background-color: rgba(0, 210, 106, 0.18);
+    background-color: rgba(0, 192, 118, 0.08);
   }
   100% {
     background-color: transparent;
@@ -183,7 +177,7 @@ img {
 }
 @keyframes priceFlashDown {
   0% {
-    background-color: rgba(255, 59, 92, 0.18);
+    background-color: rgba(255, 59, 92, 0.08);
   }
   100% {
     background-color: transparent;
@@ -192,19 +186,19 @@ img {
 
 /* ── Card hover lift ── */
 .card-hover {
-  transition: transform 0.22s var(--motion-ease), box-shadow 0.22s var(--motion-ease);
+  transition: transform 0.2s var(--motion-ease), box-shadow 0.2s var(--motion-ease);
 }
 .card-hover:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-float);
 }
 
-/* ── Order book depth bars ── */
+/* ── Order book depth bars (минималистичные полупрозрачные) ── */
 .depth-bar-bid {
-  background: linear-gradient(90deg, rgba(0, 210, 106, 0.14) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(0, 192, 118, 0.10) 0%, transparent 100%);
 }
 .depth-bar-ask {
-  background: linear-gradient(270deg, rgba(255, 59, 92, 0.14) 0%, transparent 100%);
+  background: linear-gradient(270deg, rgba(255, 59, 92, 0.10) 0%, transparent 100%);
 }
 
 /* ── Badge live: пульсирующий индикатор ── */
@@ -220,33 +214,17 @@ img {
   height: 6px;
   border-radius: 50%;
   background: var(--up);
-  animation: livePulse 1.8s ease-in-out infinite;
+  animation: livePulse 2s ease-in-out infinite;
 }
 @keyframes livePulse {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(0, 210, 106, 0.45);
+    box-shadow: 0 0 0 0 rgba(0, 192, 118, 0.35);
   }
   50% {
     opacity: 0.7;
-    box-shadow: 0 0 0 5px rgba(0, 210, 106, 0);
+    box-shadow: 0 0 0 4px rgba(0, 192, 118, 0);
   }
-}
-
-/* ── Active card with animated gradient border ── */
-.card-active {
-  position: relative;
-  border: 1px solid transparent;
-  background-clip: padding-box;
-}
-.card-active::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  z-index: -1;
-  opacity: 0.4;
 }
 
 .scroll {
@@ -262,87 +240,68 @@ img {
 
 .glass {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 
 .glass-strong {
   background: var(--glass-strong);
-  -webkit-backdrop-filter: blur(28px) saturate(200%);
-  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 16px;
   box-shadow: var(--shadow-card);
 }
 
 .card-flat {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 14px;
 }
 
 .chip-up {
   color: var(--up);
-  background: rgba(0, 210, 106, 0.12);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 192, 118, 0.1);
 }
 .chip-down {
   color: var(--down);
-  background: rgba(255, 59, 92, 0.12);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: rgba(255, 59, 92, 0.1);
 }
 .chip-warn {
   color: var(--warn);
-  background: rgba(239, 166, 46, 0.12);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: rgba(229, 158, 42, 0.1);
 }
 .chip-accent {
   color: var(--accent);
   background: var(--accent-soft);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
 }
 .chip-neutral {
   color: var(--muted);
   background: var(--surface-3);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
 }
 
 .btn-solid {
   height: 48px;
   border-radius: 14px;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: opacity 0.2s var(--motion-ease), transform 0.15s var(--motion-ease),
-    box-shadow 0.2s var(--motion-ease);
+  transition: opacity 0.18s var(--motion-ease), transform 0.12s var(--motion-ease);
 }
 .btn-up {
   background: var(--up);
-  color: #062f1d;
-  box-shadow: 0 0 20px rgba(0, 210, 106, 0.15);
-}
-.btn-up:active {
-  box-shadow: 0 0 28px rgba(0, 210, 106, 0.30);
+  color: #032014;
 }
 .btn-down {
   background: var(--down);
   color: #fff;
-  box-shadow: 0 0 20px rgba(255, 59, 92, 0.15);
-}
-.btn-down:active {
-  box-shadow: 0 0 28px rgba(255, 59, 92, 0.30);
 }
 .btn-accent {
   background: var(--accent);
@@ -353,10 +312,9 @@ img {
   color: var(--text);
 }
 .btn-solid:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
-/* Поля ввода: 16px шрифт — iOS не зумит форму при фокусе */
 .inp {
   height: 42px;
   padding: 0 12px;
@@ -382,7 +340,7 @@ img {
   margin-bottom: env(safe-area-inset-bottom);
 }
 
-/* Скелетоны с shimmer */
+/* Скелетоны */
 .skel {
   position: relative;
   overflow: hidden;
@@ -400,7 +358,7 @@ img {
     transparent 70%
   );
   transform: translateX(-100%);
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.6s infinite;
 }
 @keyframes shimmer {
   100% {
@@ -408,12 +366,10 @@ img {
   }
 }
 
-/* Прокрутка с инерцией внутри списков на iOS */
 .will-anim {
   will-change: transform;
 }
 
-/* Снижение анимаций по prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -424,7 +380,7 @@ img {
   }
 }
 
-/* Odometer: колонки цифр */
+/* Odometer */
 .od {
   display: inline-flex;
   align-items: flex-start;
@@ -446,20 +402,19 @@ img {
   line-height: 1;
 }
 
-/* Гусь (кроссфейд тем без поддержки View Transitions API: CSS transition) */
 body,
 [data-theme] {
-  transition: background-color 0.35s var(--motion-ease), color 0.35s var(--motion-ease);
+  transition: background-color 0.3s var(--motion-ease), color 0.3s var(--motion-ease);
 }
 
-/* ═══════════════ Axiom / Hyperliquid Terminal Styles ═══════════════ */
+/* ═══════════════ Minimalist Terminal Styles ═══════════════ */
 .terminal-range-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   height: 4px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-3);
   outline: none;
   cursor: pointer;
 }
@@ -469,51 +424,50 @@ body,
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #00d26a;
-  border: 2px solid #080b11;
-  box-shadow: 0 0 10px rgba(0, 210, 106, 0.6);
+  background: #ffffff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   transition: transform 0.15s ease;
 }
 .terminal-range-slider::-webkit-slider-thumb:hover,
 .terminal-range-slider::-webkit-slider-thumb:active {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 .terminal-range-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #00d26a;
-  border: 2px solid #080b11;
-  box-shadow: 0 0 10px rgba(0, 210, 106, 0.6);
+  background: #ffffff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   cursor: pointer;
 }
 .terminal-range-slider.short-thumb::-webkit-slider-thumb {
-  background: #ff3b5c;
-  box-shadow: 0 0 10px rgba(255, 59, 92, 0.6);
+  border-color: var(--down);
 }
 .terminal-range-slider.short-thumb::-moz-range-thumb {
-  background: #ff3b5c;
-  box-shadow: 0 0 10px rgba(255, 59, 92, 0.6);
+  border-color: var(--down);
 }
 
+/* Спокойные кнопки действий (без неонового свечения) */
 .terminal-glow-long {
-  box-shadow: 0 0 24px -2px rgba(0, 210, 106, 0.42), 0 0 8px rgba(0, 210, 106, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 192, 118, 0.18);
 }
 .terminal-glow-short {
-  box-shadow: 0 0 24px -2px rgba(255, 59, 92, 0.42), 0 0 8px rgba(255, 59, 92, 0.25);
+  box-shadow: 0 2px 8px rgba(255, 59, 92, 0.18);
 }
 
 .price-flash-bg-up {
-  animation: flashGreenBg 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: flashGreenBg 0.5s ease-out;
 }
 .price-flash-bg-down {
-  animation: flashRedBg 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: flashRedBg 0.5s ease-out;
 }
 
 @keyframes flashGreenBg {
   0% {
-    background-color: rgba(0, 210, 106, 0.25);
+    background-color: rgba(0, 192, 118, 0.08);
   }
   100% {
     background-color: transparent;
@@ -522,10 +476,9 @@ body,
 
 @keyframes flashRedBg {
   0% {
-    background-color: rgba(255, 59, 92, 0.25);
+    background-color: rgba(255, 59, 92, 0.08);
   }
   100% {
     background-color: transparent;
   }
 }
-

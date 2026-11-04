@@ -135,54 +135,83 @@ export function PriceChart({ symbol, klines }: { symbol: string; klines: Kline[]
     })
     chartRef.current = chart
 
-    // Crosshair move subscription for floating OHLCV
-    chart.subscribeCrosshairMove((param) => {
-      if (!param || !param.time || !param.seriesData?.size) {
-        setCrosshairData(null)
-        return
-      }
-      const mainSeries = mainRef.current
-      if (!mainSeries) return
-      const data = param.seriesData.get(mainSeries) as any
-      if (!data) {
-        setCrosshairData(null)
-        return
-      }
+    // Crosshair move subscription for floating OHLCV, throttled via requestAnimationFrame
+    let crosshairRaf: number | null = null
+    type CrosshairHandler = Parameters<IChartApi['subscribeCrosshairMove']>[0]
+    type CrosshairParam = Parameters<CrosshairHandler>[0]
+    let pendingParam: CrosshairParam | null = null
 
-      const volSeries = volRef.current
-      const volData = volSeries ? (param.seriesData.get(volSeries) as any) : null
-      const vol = volData?.value ?? 0
+    const handleCrosshairMove: CrosshairHandler = (param) => {
+      pendingParam = param
+      if (crosshairRaf !== null) return
+      crosshairRaf = requestAnimationFrame(() => {
+        crosshairRaf = null
+        const p = pendingParam
+        if (!p || !p.time || !p.seriesData?.size) {
+          setCrosshairData(null)
+          return
+        }
+        const mainSeries = mainRef.current
+        if (!mainSeries) return
+        const data = p.seriesData.get(mainSeries) as any
+        if (!data) {
+          setCrosshairData(null)
+          return
+        }
 
-      if ('open' in data && 'close' in data) {
-        setCrosshairData({
-          open: Number(data.open),
-          high: Number(data.high),
-          low: Number(data.low),
-          close: Number(data.close),
-          volume: Number(vol),
-        })
-      } else if ('value' in data) {
-        setCrosshairData({
-          open: Number(data.value),
-          high: Number(data.value),
-          low: Number(data.value),
-          close: Number(data.value),
-          volume: Number(vol),
-        })
-      }
-    })
+        const volSeries = volRef.current
+        const volData = volSeries ? (p.seriesData.get(volSeries) as any) : null
+        const vol = volData?.value ?? 0
 
-    const resize = () => {
-      const w = el.clientWidth
-      const h = el.clientHeight
-      if (w > 0 && h > 0) chart.resize(w, h)
+        if ('open' in data && 'close' in data) {
+          setCrosshairData({
+            open: Number(data.open),
+            high: Number(data.high),
+            low: Number(data.low),
+            close: Number(data.close),
+            volume: Number(vol),
+          })
+        } else if ('value' in data) {
+          setCrosshairData({
+            open: Number(data.value),
+            high: Number(data.value),
+            low: Number(data.value),
+            close: Number(data.value),
+            volume: Number(vol),
+          })
+        }
+      })
     }
-    resize()
+    chart.subscribeCrosshairMove(handleCrosshairMove)
+
+    let resizeRaf: number | null = null
+    const resize = () => {
+      if (resizeRaf !== null) return
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = null
+        if (!el || !chartRef.current) return
+        const w = el.clientWidth
+        const h = el.clientHeight
+        if (w > 0 && h > 0) chartRef.current.resize(w, h)
+      })
+    }
+    const initW = el.clientWidth
+    const initH = el.clientHeight
+    if (initW > 0 && initH > 0) chart.resize(initW, initH)
+
     const ro = new ResizeObserver(resize)
     ro.observe(el)
 
     return () => {
-      chart.unsubscribeCrosshairMove(() => {})
+      if (crosshairRaf !== null) {
+        cancelAnimationFrame(crosshairRaf)
+        crosshairRaf = null
+      }
+      if (resizeRaf !== null) {
+        cancelAnimationFrame(resizeRaf)
+        resizeRaf = null
+      }
+      chart.unsubscribeCrosshairMove(handleCrosshairMove)
       ro.disconnect()
       chart.remove()
       chartRef.current = null

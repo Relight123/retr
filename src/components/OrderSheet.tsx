@@ -1,6 +1,10 @@
-/** Нижний sheet ордера в стиле Axiom / Hyperliquid terminal.
- *  Long/Short табы, выбор плеча (1x-50x), ввод объёма с переключателем USDT/Coin,
- *  слайдер %, TP/SL с расчётом PnL и Liq Price, Order Value, Fee, Margin Required. */
+/** Нижний sheet ордера в минималистичном стиле (Phantom / Apple):
+ *  - Чистый drawer с верхним хэндлом и заголовком монеты
+ *  - Мягкий переключатель Long / Short без кислотного неона
+ *  - Крупный лаконичный ввод суммы с переключателем валюты
+ *  - Плоские кнопки процентов (25%, 50%, 75%, 100%)
+ *  - Чёткая и аккуратная таблица параметров ордера
+ *  - Минималистичная цельная кнопка действия */
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -10,16 +14,13 @@ import {
   ChevronDown,
   ChevronUp,
   Zap,
-  RotateCcw,
   PlusCircle,
-  ShieldAlert,
   ArrowUpDown,
   Check,
 } from 'lucide-react'
 import { Sheet } from './ui'
 import { CoinIcon } from './CoinIcon'
 import { useI18n } from '../lib/i18n'
-import { useNav } from '../store/navigation'
 import { useMarket } from '../store/market'
 import { useTrading, type SubmitArgs } from '../store/trading'
 import { useSettings } from '../store/settings'
@@ -41,7 +42,7 @@ export function OrderSheet({
   defaultSide,
   initialType,
   positionId,
-  onPricePick,
+  onPricePick: _onPricePick,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
@@ -52,7 +53,6 @@ export function OrderSheet({
   onPricePick?: (p: string) => void
 }) {
   const { t } = useI18n()
-  const nav = useNav()
   const market = useMarket()
   const trading = useTrading()
   const settings = useSettings()
@@ -190,9 +190,7 @@ export function OrderSheet({
         setUnit('base')
       }
     } else {
-      // Futures: available margin × leverage × pct
       const availMargin = cash.toNumber()
-      // reserve 1% for fee
       const effectiveMargin = Math.max(0, availMargin * 0.99)
       const targetNotional = (effectiveMargin * lev * pct) / 100
       if (unit === 'quote') {
@@ -207,7 +205,6 @@ export function OrderSheet({
     }
   }
 
-  // Preset offsets for TP / SL
   const setTpPercentOffset = (pDelta: number) => {
     buzz(4)
     const ref = parseFloat(estPrice || last || '0')
@@ -250,7 +247,6 @@ export function OrderSheet({
 
   const canSubmit = error === null && !busy
 
-  // Order submission
   const submit = () => {
     if (!canSubmit) return
     buzz(12)
@@ -266,7 +262,7 @@ export function OrderSheet({
       tpPrice: type === 'oco' ? tpPrice : undefined,
       slPrice: type === 'oco' ? slPrice : undefined,
       leverage: mode === 'futures' ? lev : undefined,
-      positionId: needPosition ? pos?.id : undefined,
+      positionId: needPosition ? (pos?.id ?? positionId) : undefined,
     }
     void trading
       .submitOrder(args)
@@ -281,11 +277,10 @@ export function OrderSheet({
       .finally(() => setBusy(false))
   }
 
-  // Quick reset to add 10k funds if balance is 0
   const handleAddFunds = () => {
     buzz(10)
     trading.resetAccount('10000')
-    toast.push('success', 'Added $10,000 USD paper trading balance!')
+    toast.push('success', 'Added $10,000 USD paper trading balance')
   }
 
   const isLong = side === 'buy'
@@ -294,32 +289,32 @@ export function OrderSheet({
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      maxHeight="92dvh"
+      maxHeight="90dvh"
       title={
         <div className="flex items-center gap-2">
           <CoinIcon symbol={symbol} size={20} />
-          <span className="font-bold tracking-tight">{symbol}</span>
-          <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-faint">
+          <span className="font-semibold tracking-tight text-white">{symbol}</span>
+          <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[10px] font-medium text-faint">
             {mode === 'futures' ? `${lev}x Perp` : 'Spot'}
           </span>
         </div>
       }
     >
       <div className="flex flex-col gap-3 pb-6 text-text">
-        {/* ── 1. Long / Short Terminal Dual Switcher ── */}
-        <div className="relative flex rounded-2xl bg-[#0b0e14] p-1 border border-line/80">
+        {/* ── 1. Clean Long / Short Switcher ── */}
+        <div className="flex rounded-xl bg-surface-2 p-1 border border-line">
           <button
             onClick={() => {
               buzz(8)
               setSide('buy')
             }}
-            className={`relative flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-[14px] font-semibold transition-colors ${
               isLong
-                ? 'bg-[#00d26a] text-[#051a0e] shadow-[0_0_20px_rgba(0,210,106,0.35)]'
+                ? 'bg-[#00c076] text-[#032014]'
                 : 'text-muted hover:text-white'
             }`}
           >
-            <Zap size={16} className={isLong ? 'fill-current' : ''} />
+            <Zap size={15} className={isLong ? 'fill-current' : ''} />
             <span>{mode === 'futures' ? 'Long' : t('symbol.buy')}</span>
           </button>
           <button
@@ -327,20 +322,20 @@ export function OrderSheet({
               buzz(8)
               setSide('sell')
             }}
-            className={`relative flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-[14px] font-semibold transition-colors ${
               !isLong
-                ? 'bg-[#ff3b5c] text-white shadow-[0_0_20px_rgba(255,59,92,0.35)]'
+                ? 'bg-[#ff3b5c] text-white'
                 : 'text-muted hover:text-white'
             }`}
           >
-            <Flame size={16} className={!isLong ? 'fill-current' : ''} />
+            <Flame size={15} className={!isLong ? 'fill-current' : ''} />
             <span>{mode === 'futures' ? 'Short' : t('symbol.sell')}</span>
           </button>
         </div>
 
         {/* ── 2. Order Type Sub-tabs & Leverage Pill ── */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 rounded-xl bg-[#0b0e14] p-1 border border-line/60">
+          <div className="flex items-center gap-0.5 rounded-lg bg-surface-2 p-0.5 border border-line">
             {(['market', 'limit', 'stop-loss', 'oco'] as const).map((ot) => {
               const active = type === ot
               const label =
@@ -359,10 +354,10 @@ export function OrderSheet({
                     setType(ot)
                     setTpsl(ot === 'oco')
                   }}
-                  className={`rounded-lg px-2.5 py-1 text-[12px] font-semibold transition-all ${
+                  className={`rounded-md px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
                     active
-                      ? 'bg-surface-3 text-white shadow-sm'
-                      : 'text-muted hover:text-text'
+                      ? 'bg-surface-3 text-white'
+                      : 'text-muted hover:text-white'
                   }`}
                 >
                   {label}
@@ -372,18 +367,17 @@ export function OrderSheet({
           </div>
 
           {settings.leverageEnabled && (
-            <motion.button
-              whileTap={{ scale: 0.96 }}
+            <button
               onClick={() => {
                 buzz(6)
                 setLevOpen((v) => !v)
               }}
-              className="flex items-center gap-1.5 rounded-xl border border-line/80 bg-[#0b0e14] px-3 py-1.5 text-[12px] font-bold text-text hover:border-line-strong transition-all"
+              className="flex items-center gap-1.5 rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-[11.5px] font-medium text-text hover:bg-surface-3 transition-colors"
             >
-              <SlidersHorizontal size={13} className="text-accent" />
-              <span className="tnum">Leverage: <span className="text-[#00d26a]">{lev}x</span></span>
-              {levOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </motion.button>
+              <SlidersHorizontal size={12} className="text-muted" />
+              <span className="tnum">Leverage: <span className="font-semibold text-white">{lev}x</span></span>
+              {levOpen ? <ChevronUp size={13} className="text-muted" /> : <ChevronDown size={13} className="text-muted" />}
+            </button>
           )}
         </div>
 
@@ -394,16 +388,14 @@ export function OrderSheet({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden rounded-2xl border border-line/80 bg-[#0e121a] p-3"
+              transition={{ duration: 0.18 }}
+              className="overflow-hidden rounded-xl border border-line bg-surface-2 p-3"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-faint">
-                  Adjust Leverage
-                </span>
-                <span className="text-[13px] font-bold text-accent tnum">{lev}x</span>
+                <span className="text-[11px] font-medium text-faint">Adjust Leverage</span>
+                <span className="text-[12px] font-semibold text-white tnum">{lev}x</span>
               </div>
-              <div className="grid grid-cols-6 gap-1.5 mb-3">
+              <div className="grid grid-cols-6 gap-1.5 mb-2.5">
                 {LEVERAGE_PRESETS.map((l) => (
                   <button
                     key={l}
@@ -411,9 +403,9 @@ export function OrderSheet({
                       buzz(4)
                       setLev(l)
                     }}
-                    className={`h-8 rounded-lg text-[12px] font-bold tnum transition-all ${
+                    className={`h-7 rounded-md text-[11.5px] font-medium tnum transition-colors ${
                       lev === l
-                        ? 'bg-accent text-white shadow-[0_0_12px_rgba(91,123,254,0.4)]'
+                        ? 'bg-white text-black font-semibold'
                         : 'bg-surface-3 text-muted hover:text-white'
                     }`}
                   >
@@ -438,25 +430,25 @@ export function OrderSheet({
           )}
         </AnimatePresence>
 
-        {/* ── 3. Price Fields (Limit / Trigger / TP / SL) ── */}
+        {/* ── 3. Price Fields (Limit / Trigger) ── */}
         {(type === 'limit' || type === 'oco') && (
-          <div className="flex items-center justify-between rounded-2xl border border-line/80 bg-[#0e121a] px-3.5 py-2.5">
-            <span className="text-[12px] font-medium text-muted">Price</span>
+          <div className="flex items-center justify-between rounded-xl border border-line bg-surface-2 px-3.5 py-2.5">
+            <span className="text-[12px] text-muted">Price</span>
             <div className="flex items-center gap-2">
               <input
                 inputMode="decimal"
                 value={limitPrice}
                 onChange={(e) => setLimitPrice(e.target.value.replace(/[^\d.]/g, ''))}
                 placeholder={last ? fmtPrice(parseFloat(last)) : '0.00'}
-                className="w-32 bg-transparent text-right font-bold text-white text-[15px] outline-none tnum placeholder:text-faint"
+                className="w-32 bg-transparent text-right font-semibold text-white text-[15px] outline-none tnum placeholder:text-faint"
               />
-              <span className="text-[11px] font-semibold text-faint">USDT</span>
+              <span className="text-[11px] font-medium text-faint">USDT</span>
               <button
                 onClick={() => {
                   buzz(4)
                   if (last) setLimitPrice(last)
                 }}
-                className="rounded-md bg-surface-3 px-2 py-0.5 text-[10px] font-bold text-accent uppercase"
+                className="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-medium text-muted hover:text-white uppercase"
               >
                 Last
               </button>
@@ -465,40 +457,40 @@ export function OrderSheet({
         )}
 
         {type === 'stop-loss' && (
-          <div className="flex items-center justify-between rounded-2xl border border-line/80 bg-[#0e121a] px-3.5 py-2.5">
-            <span className="text-[12px] font-medium text-muted">Trigger Price</span>
+          <div className="flex items-center justify-between rounded-xl border border-line bg-surface-2 px-3.5 py-2.5">
+            <span className="text-[12px] text-muted">Trigger Price</span>
             <div className="flex items-center gap-2">
               <input
                 inputMode="decimal"
                 value={triggerPrice}
                 onChange={(e) => setTriggerPrice(e.target.value.replace(/[^\d.]/g, ''))}
                 placeholder={last ? fmtPrice(parseFloat(last)) : '0.00'}
-                className="w-32 bg-transparent text-right font-bold text-white text-[15px] outline-none tnum placeholder:text-faint"
+                className="w-32 bg-transparent text-right font-semibold text-white text-[15px] outline-none tnum placeholder:text-faint"
               />
-              <span className="text-[11px] font-semibold text-faint">USDT</span>
+              <span className="text-[11px] font-medium text-faint">USDT</span>
             </div>
           </div>
         )}
 
-        {/* ── 4. Amount Input Box with Coin Avatar & Currency Switch ── */}
-        <div className="rounded-2xl border border-line/80 bg-[#0e121a] p-3.5 shadow-sm">
+        {/* ── 4. Minimal Amount Input Box ── */}
+        <div className="rounded-xl border border-line bg-surface-2 p-3.5">
           {/* Header row */}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[12px] font-medium text-muted">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[12px] text-muted">
               {isLong ? 'Buy Amount' : 'Sell Amount'}
             </span>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 rounded-lg bg-surface-3/80 px-2 py-1">
-                <CoinIcon symbol={symbol} size={17} />
-                <span className="text-[12px] font-bold text-text">{baseSymbol}</span>
+              <div className="flex items-center gap-1.5 rounded-md bg-surface-3 px-2 py-0.5">
+                <CoinIcon symbol={symbol} size={16} />
+                <span className="text-[12px] font-medium text-text">{baseSymbol}</span>
               </div>
               <button
                 onClick={() => {
                   buzz(4)
                   setUnit(unit === 'quote' ? 'base' : 'quote')
                 }}
-                className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-[11px] font-semibold text-muted hover:text-white"
-                title="Switch currency unit"
+                className="flex items-center gap-1 rounded-md bg-surface-3 px-2 py-0.5 text-[11px] text-muted hover:text-white transition-colors"
+                title="Switch unit"
               >
                 <ArrowUpDown size={11} />
                 <span>{unit === 'quote' ? 'USDT' : baseSymbol}</span>
@@ -516,27 +508,14 @@ export function OrderSheet({
                 setAmount(val)
               }}
               placeholder="0.0"
-              className="w-full bg-transparent text-[28px] font-extrabold text-white outline-none tnum placeholder:text-faint/50"
+              className="w-full bg-transparent text-[30px] font-semibold text-white outline-none tnum placeholder:text-faint/40"
             />
-            <span className="ml-2 text-[14px] font-bold text-muted shrink-0">
+            <span className="ml-2 text-[14px] font-medium text-muted shrink-0">
               {unit === 'quote' ? 'USDT' : baseSymbol}
             </span>
           </div>
 
-          {/* Range Slider */}
-          <div className="mt-3">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={percentSlider}
-              onChange={(e) => applyPercent(parseInt(e.target.value))}
-              className={`terminal-range-slider ${isLong ? '' : 'short-thumb'}`}
-            />
-          </div>
-
-          {/* Quick Percentage Chips */}
+          {/* Quick Percentage Flat Buttons */}
           <div className="mt-2.5 grid grid-cols-4 gap-1.5">
             {PERCENT_PRESETS.map((p) => {
               const active = percentSlider === p
@@ -544,12 +523,12 @@ export function OrderSheet({
                 <button
                   key={p}
                   onClick={() => applyPercent(p)}
-                  className={`h-8 rounded-xl text-[12px] font-bold tnum transition-all ${
+                  className={`h-7 rounded-lg text-[11.5px] font-medium tnum transition-colors ${
                     active
                       ? isLong
-                        ? 'bg-[#00d26a]/20 text-[#00d26a] border border-[#00d26a]/40'
-                        : 'bg-[#ff3b5c]/20 text-[#ff3b5c] border border-[#ff3b5c]/40'
-                      : 'bg-surface-3 text-muted hover:text-white hover:bg-surface-2'
+                        ? 'bg-[#00c076]/15 text-[#00c076] font-semibold'
+                        : 'bg-[#ff3b5c]/15 text-[#ff3b5c] font-semibold'
+                      : 'bg-surface-3/80 text-muted hover:text-white'
                   }`}
                 >
                   {p}%
@@ -559,29 +538,29 @@ export function OrderSheet({
           </div>
         </div>
 
-        {/* ── 5. TP / SL Toggle & Expansion ── */}
-        <div className="rounded-2xl border border-line/80 bg-[#0e121a] overflow-hidden">
+        {/* ── 5. TP / SL Toggle & Details ── */}
+        <div className="rounded-xl border border-line bg-surface-2 overflow-hidden">
           <button
             onClick={toggleTpsl}
-            className="flex w-full items-center justify-between px-3.5 py-3 text-left hover:bg-surface-3/30 transition-colors"
+            className="flex w-full items-center justify-between px-3.5 py-2.5 text-left hover:bg-surface-3/40 transition-colors"
           >
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <span
-                className={`flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
+                className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
                   tpsl
-                    ? 'border-accent bg-accent text-white shadow-[0_0_8px_rgba(91,123,254,0.5)]'
+                    ? 'border-accent bg-accent text-white'
                     : 'border-line-strong bg-transparent'
                 }`}
               >
-                {tpsl && <Check size={13} strokeWidth={3} />}
+                {tpsl && <Check size={11} strokeWidth={3} />}
               </span>
-              <span className="text-[13px] font-bold text-text">TP / SL</span>
+              <span className="text-[12.5px] font-medium text-text">Take Profit / Stop Loss</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-faint">Est. Liq. Price:</span>
-              <span className={`text-[12px] font-bold tnum ${estimatedLiq ? 'text-warn' : 'text-faint'}`}>
-                {estimatedLiq ? `$${fmtPrice(estimatedLiq)}` : '--'}
+            <div className="flex items-center gap-1.5 text-[11.5px]">
+              <span className="text-faint">Est. Liq:</span>
+              <span className={`font-medium tnum ${estimatedLiq ? 'text-warn' : 'text-faint'}`}>
+                {estimatedLiq ? `$${fmtPrice(estimatedLiq)}` : '—'}
               </span>
             </div>
           </button>
@@ -592,66 +571,62 @@ export function OrderSheet({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="border-t border-line/60 p-3.5 flex flex-col gap-3"
+                transition={{ duration: 0.18 }}
+                className="border-t border-line p-3 flex flex-col gap-2.5"
               >
-                {/* Take Profit Row */}
+                {/* Take Profit */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11.5px] font-semibold text-[#00d26a]">
-                      Take Profit Price
-                    </span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-medium text-[#00c076]">Take Profit</span>
                     <div className="flex items-center gap-1">
                       {[5, 10, 25, 50].map((pct) => (
                         <button
                           key={pct}
                           onClick={() => setTpPercentOffset(pct)}
-                          className="rounded px-1.5 py-0.5 text-[10px] font-bold bg-[#00d26a]/15 text-[#00d26a] hover:bg-[#00d26a]/25"
+                          className="rounded px-1 py-0.2 text-[10px] font-medium bg-[#00c076]/10 text-[#00c076] hover:bg-[#00c076]/20"
                         >
                           +{pct}%
                         </button>
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center rounded-xl bg-surface-2 px-3 py-2 border border-line">
+                  <div className="flex items-center rounded-lg bg-surface-3 px-2.5 py-1.5">
                     <input
                       inputMode="decimal"
                       value={tpPrice}
                       onChange={(e) => setTpPrice(e.target.value.replace(/[^\d.]/g, ''))}
                       placeholder={last ? fmtPrice(parseFloat(last) * 1.05) : '0.00'}
-                      className="w-full bg-transparent text-[14px] font-bold text-white outline-none tnum"
+                      className="w-full bg-transparent text-[13px] font-medium text-white outline-none tnum"
                     />
-                    <span className="text-[11px] font-semibold text-faint">USDT</span>
+                    <span className="text-[11px] text-faint">USDT</span>
                   </div>
                 </div>
 
-                {/* Stop Loss Row */}
+                {/* Stop Loss */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11.5px] font-semibold text-[#ff3b5c]">
-                      Stop Loss Price
-                    </span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-medium text-[#ff3b5c]">Stop Loss</span>
                     <div className="flex items-center gap-1">
                       {[3, 5, 10, 20].map((pct) => (
                         <button
                           key={pct}
                           onClick={() => setSlPercentOffset(pct)}
-                          className="rounded px-1.5 py-0.5 text-[10px] font-bold bg-[#ff3b5c]/15 text-[#ff3b5c] hover:bg-[#ff3b5c]/25"
+                          className="rounded px-1 py-0.2 text-[10px] font-medium bg-[#ff3b5c]/10 text-[#ff3b5c] hover:bg-[#ff3b5c]/20"
                         >
                           -{pct}%
                         </button>
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center rounded-xl bg-surface-2 px-3 py-2 border border-line">
+                  <div className="flex items-center rounded-lg bg-surface-3 px-2.5 py-1.5">
                     <input
                       inputMode="decimal"
                       value={slPrice}
                       onChange={(e) => setSlPrice(e.target.value.replace(/[^\d.]/g, ''))}
                       placeholder={last ? fmtPrice(parseFloat(last) * 0.95) : '0.00'}
-                      className="w-full bg-transparent text-[14px] font-bold text-white outline-none tnum"
+                      className="w-full bg-transparent text-[13px] font-medium text-white outline-none tnum"
                     />
-                    <span className="text-[11px] font-semibold text-faint">USDT</span>
+                    <span className="text-[11px] text-faint">USDT</span>
                   </div>
                 </div>
               </motion.div>
@@ -659,62 +634,46 @@ export function OrderSheet({
           </AnimatePresence>
         </div>
 
-        {/* ── 6. Axiom / Hyperliquid Order Summary Table ── */}
-        <div className="flex flex-col gap-1.5 rounded-2xl bg-[#0e121a] p-3.5 border border-line/60 text-[12px]">
+        {/* ── 6. Clean Order Summary Table ── */}
+        <div className="flex flex-col gap-1.5 rounded-xl bg-surface-2 p-3 border border-line text-[12px]">
           <SummaryRow label="Available Margin">
             <span className="text-white">{fmtUsd(cash.toString())}</span>
           </SummaryRow>
-
-          <SummaryRow label="Account Value">
-            <span className="text-white">{fmtUsd(snap ? snap.cash : '0')}</span>
-          </SummaryRow>
-
-          <SummaryRow label="Current Position">
-            {pos ? (
-              <span className={`font-semibold ${pos.side === 'long' ? 'text-[#00d26a]' : 'text-[#ff3b5c]'}`}>
-                {pos.leverage}x {pos.side.toUpperCase()} ({fmtQty(pos.qty)} {baseSymbol})
-              </span>
-            ) : (
-              <span className="text-faint">--</span>
-            )}
-          </SummaryRow>
-
-          <div className="my-1 border-t border-line/50" />
 
           <SummaryRow label={t('order.orderValue')}>
             <span>{fmtUsd(notional.toString())}</span>
           </SummaryRow>
 
-          <SummaryRow label={t('order.fee')}>
-            <span>
-              {fmtUsd(fee.toString())} ({fmtPct(settings.feePct)})
-            </span>
-          </SummaryRow>
-
           {mode === 'futures' && (
             <>
               <SummaryRow label="Margin Required">
-                <span className="text-accent font-bold">{fmtUsd(margin.toString())}</span>
+                <span className="text-white font-medium">{fmtUsd(margin.toString())}</span>
               </SummaryRow>
               <SummaryRow label="Est. Liq Price">
-                <span className="text-warn font-bold">
-                  {estimatedLiq ? `$${fmtPrice(estimatedLiq)}` : '--'}
+                <span className={`font-medium ${estimatedLiq ? 'text-warn' : 'text-faint'}`}>
+                  {estimatedLiq ? `$${fmtPrice(estimatedLiq)}` : '—'}
                 </span>
               </SummaryRow>
             </>
           )}
+
+          <SummaryRow label={t('order.fee')}>
+            <span className="text-muted">
+              {fmtUsd(fee.toString())} ({fmtPct(settings.feePct)})
+            </span>
+          </SummaryRow>
         </div>
 
         {/* ── 7. Errors & Hints ── */}
         {error === 'balance' && (
-          <div className="flex items-center justify-between rounded-xl bg-down/10 px-3 py-2 text-[12px] text-down border border-down/30">
+          <div className="flex items-center justify-between rounded-xl bg-down/10 px-3 py-2 text-[12px] text-down border border-down/20">
             <div className="flex items-center gap-1.5">
               <Flame size={14} />
               <span>Insufficient margin balance</span>
             </div>
             <button
               onClick={handleAddFunds}
-              className="flex items-center gap-1 rounded bg-down/20 px-2 py-0.5 font-bold text-white text-[11px]"
+              className="flex items-center gap-1 rounded bg-down/20 px-2 py-0.5 font-medium text-white text-[11px]"
             >
               <PlusCircle size={12} /> Add Funds
             </button>
@@ -739,42 +698,34 @@ export function OrderSheet({
           </div>
         )}
 
-        {/* ── 8. Big Action Button ── */}
+        {/* ── 8. Minimal Solid Action Button ── */}
         {cash.lte(0) ? (
-          <motion.button
-            whileTap={{ scale: 0.98 }}
+          <button
             onClick={handleAddFunds}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-accent to-accent-2 text-white font-bold text-[15px] shadow-[0_0_20px_rgba(91,123,254,0.35)]"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent text-white font-semibold text-[15px] transition-transform active:scale-[0.98]"
           >
-            <PlusCircle size={18} />
-            Add More Funds ($10,000)
-          </motion.button>
+            <PlusCircle size={17} />
+            Add Funds ($10,000)
+          </button>
         ) : (
-          <motion.button
-            whileTap={{ scale: 0.98 }}
+          <button
             disabled={!canSubmit}
             onClick={submit}
-            className={`flex h-12 w-full items-center justify-center gap-2 rounded-2xl font-bold text-[15px] transition-all ${
+            className={`flex h-12 w-full items-center justify-center gap-2 rounded-xl font-semibold text-[15px] transition-all active:scale-[0.98] ${
               !canSubmit
                 ? 'opacity-40 bg-surface-3 text-muted cursor-not-allowed'
                 : isLong
-                ? 'bg-[#00d26a] text-[#051a0e] shadow-[0_0_24px_rgba(0,210,106,0.45)]'
-                : 'bg-[#ff3b5c] text-white shadow-[0_0_24px_rgba(255,59,92,0.45)]'
+                ? 'bg-[#00c076] text-[#032014]'
+                : 'bg-[#ff3b5c] text-white'
             }`}
           >
-            {isLong ? <Zap size={18} className="fill-current" /> : <Flame size={18} className="fill-current" />}
+            {isLong ? <Zap size={16} className="fill-current" /> : <Flame size={16} className="fill-current" />}
             <span>
               {isLong ? `Long ${baseSymbol}` : `Short ${baseSymbol}`}
               {mode === 'futures' && ` (${lev}x)`}
             </span>
-          </motion.button>
+          </button>
         )}
-
-        {/* ── 9. Hyperliquid / Axiom Terminal Watermark ── */}
-        <div className="flex items-center justify-center gap-1.5 text-[10px] text-faint">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#00d26a] animate-pulse" />
-          <span>powered by <strong className="text-muted">Hyperliquid</strong></span>
-        </div>
       </div>
     </Sheet>
   )
@@ -784,7 +735,7 @@ function SummaryRow({ label, children }: { label: string; children: React.ReactN
   return (
     <div className="flex items-center justify-between">
       <span className="text-faint">{label}</span>
-      <span className="font-semibold tnum">{children}</span>
+      <span className="font-normal text-text tnum">{children}</span>
     </div>
   )
 }
