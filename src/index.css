@@ -2,30 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ═══════════════ Дизайн-токены (Minimalist Aesthetic) ═══════════════ */
+/* ═══════════════ Дизайн-токены (Moonshot Minimalist Aesthetic) ═══════════════ */
 :root,
 [data-theme='dark'] {
-  --bg: #0a0d14;
-  --surface: #10141e;
-  --surface-2: #161b28;
-  --surface-3: #1e2436;
-  --line: rgba(255, 255, 255, 0.05);
-  --line-strong: rgba(255, 255, 255, 0.1);
+  --bg: #090b10;
+  --surface: #141822;
+  --surface-2: #1a202c;
+  --surface-3: #222938;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.12);
   --text: #f0f3fa;
   --muted: #8b95a8;
   --faint: #525a6c;
-  --accent: #4e75ff;
-  --accent-2: #00c076;
-  --accent-soft: rgba(78, 117, 255, 0.1);
-  --up: #00c076;
+  --accent: #27e39f;
+  --accent-2: #00d26a;
+  --accent-soft: rgba(39, 227, 159, 0.12);
+  --up: #27e39f;
   --down: #ff3b5c;
   --warn: #e59e2a;
-  --glass: rgba(10, 13, 20, 0.75);
-  --glass-strong: rgba(10, 13, 20, 0.92);
+  --glass: rgba(9, 11, 16, 0.75);
+  --glass-strong: rgba(9, 11, 16, 0.92);
   --skeleton-a: rgba(255, 255, 255, 0.03);
   --skeleton-b: rgba(255, 255, 255, 0.07);
-  --shadow-card: 0 4px 16px -2px rgba(0, 0, 0, 0.25);
-  --shadow-float: 0 8px 30px -4px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 4px 18px -2px rgba(0, 0, 0, 0.35);
+  --shadow-float: 0 10px 32px -4px rgba(0, 0, 0, 0.55);
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -39,11 +39,11 @@
   --text: #0e121e;
   --muted: #60687a;
   --faint: #929bb0;
-  --accent: #4e75ff;
-  --accent-2: #00c076;
-  --accent-soft: rgba(78, 117, 255, 0.08);
-  --up: #00a86b;
-  --down: #f03050;
+  --accent: #00d26a;
+  --accent-2: #27e39f;
+  --accent-soft: rgba(0, 210, 106, 0.08);
+  --up: #00d26a;
+  --down: #ff3b5c;
   --warn: #d98a10;
   --glass: rgba(255, 255, 255, 0.75);
   --glass-strong: rgba(255, 255, 255, 0.90);
@@ -152,12 +152,12 @@ img {
   }
 }
 
-/* ── Спокойные подсветки (без кислотных неоновых ореолов) ── */
+/* ── Спокойные подсветки ── */
 .glow-up {
-  box-shadow: 0 2px 10px rgba(0, 192, 118, 0.15);
+  box-shadow: 0 2px 10px rgba(39, 227, 159, 0.18);
 }
 .glow-down {
-  box-shadow: 0 2px 10px rgba(255, 59, 92, 0.15);
+  box-shadow: 0 2px 10px rgba(255, 59, 92, 0.18);
 }
 
 /* ── Фоновый пульс изменения цены (тонкий и ненавязчивый) ── */
@@ -169,7 +169,7 @@ img {
 }
 @keyframes priceFlashUp {
   0% {
-    background-color: rgba(0, 192, 118, 0.08);
+    background-color: rgba(39, 227, 159, 0.1);
   }
   100% {
     background-color: transparent;
@@ -177,7 +177,7 @@ img {
 }
 @keyframes priceFlashDown {
   0% {
-    background-color: rgba(255, 59, 92, 0.08);
+    background-color: rgba(255, 59, 92, 0.1);
   }
   100% {
     background-color: transparent;
@@ -193,12 +193,12 @@ img {
   box-shadow: var(--shadow-float);
 }
 
-/* ── Order book depth bars (минималистичные полупрозрачные) ── */
+/* ── Order book depth bars ── */
 .depth-bar-bid {
-  background: linear-gradient(90deg, rgba(0, 192, 118, 0.10) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(39, 227, 159, 0.12) 0%, transparent 100%);
 }
 .depth-bar-ask {
-  background: linear-gradient(270deg, rgba(255, 59, 92, 0.10) 0%, transparent 100%);
+  background: linear-gradient(270deg, rgba(255, 59, 92, 0.12) 0%, transparent 100%);
 }
 
 /* ── Badge live: пульсирующий индикатор ── */
@@ -219,11 +219,11 @@ img {
 @keyframes livePulse {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(0, 192, 118, 0.35);
+    box-shadow: 0 0 0 0 rgba(39, 227, 159, 0.35);
   }
   50% {
     opacity: 0.7;
-    box-shadow: 0 0 0 4px rgba(0, 192, 118, 0);
+    box-shadow: 0 0 0 4px rgba(39, 227, 159, 0);
   }
 }
 
@@ -253,31 +253,31 @@ img {
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: var(--shadow-card);
 }
 
 .card-flat {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 16px;
 }
 
 .chip-up {
   color: var(--up);
-  background: rgba(0, 192, 118, 0.1);
+  background: rgba(39, 227, 159, 0.12);
 }
 .chip-down {
   color: var(--down);
-  background: rgba(255, 59, 92, 0.1);
+  background: rgba(255, 59, 92, 0.12);
 }
 .chip-warn {
   color: var(--warn);
-  background: rgba(229, 158, 42, 0.1);
+  background: rgba(229, 158, 42, 0.12);
 }
 .chip-accent {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: #032014;
+  background: var(--accent);
 }
 .chip-neutral {
   color: var(--muted);
@@ -305,7 +305,7 @@ img {
 }
 .btn-accent {
   background: var(--accent);
-  color: #fff;
+  color: #032014;
 }
 .btn-ghost {
   background: var(--surface-3);
@@ -450,12 +450,12 @@ body,
   border-color: var(--down);
 }
 
-/* Спокойные кнопки действий (без неонового свечения) */
+/* Спокойные кнопки действий */
 .terminal-glow-long {
-  box-shadow: 0 2px 8px rgba(0, 192, 118, 0.18);
+  box-shadow: 0 2px 8px rgba(39, 227, 159, 0.2);
 }
 .terminal-glow-short {
-  box-shadow: 0 2px 8px rgba(255, 59, 92, 0.18);
+  box-shadow: 0 2px 8px rgba(255, 59, 92, 0.2);
 }
 
 .price-flash-bg-up {
@@ -467,7 +467,7 @@ body,
 
 @keyframes flashGreenBg {
   0% {
-    background-color: rgba(0, 192, 118, 0.08);
+    background-color: rgba(39, 227, 159, 0.1);
   }
   100% {
     background-color: transparent;
@@ -476,7 +476,7 @@ body,
 
 @keyframes flashRedBg {
   0% {
-    background-color: rgba(255, 59, 92, 0.08);
+    background-color: rgba(255, 59, 92, 0.1);
   }
   100% {
     background-color: transparent;

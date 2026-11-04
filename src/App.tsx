@@ -77,7 +77,7 @@ function Shell() {
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
-            className="absolute inset-0 flex flex-col"
+            className="absolute inset-0 flex flex-col pb-24"
           >
             {page}
           </motion.div>

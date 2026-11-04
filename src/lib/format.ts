@@ -54,6 +54,31 @@ export function fmtPct(v: number, withSign = true): string {
   return (withSign && v > 0 ? '+' : '') + s + '%'
 }
 
+/** Форматирование цены в стиле Moonshot: 80 598,00 или 0,06 */
+export function fmtMoonshotPrice(v: string | number): string {
+  const n = typeof v === 'number' ? v : parseFloat(v)
+  if (!isFinite(n)) return '—'
+  if (n >= 1000) {
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+  if (n >= 1) {
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 3 })
+  }
+  if (n > 0) {
+    const decimals = fmtDecimalsForPrice(n)
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: decimals })
+  }
+  return '0,00'
+}
+
+/** Процент со стрелочкой в стиле Moonshot: ↑ 3,8% или ↓ 1,2% */
+export function fmtMoonshotArrowPct(pct: number): { arrow: string; text: string; isUp: boolean } {
+  const isUp = pct >= 0
+  const arrow = isUp ? '↑' : '↓'
+  const text = `${arrow} ${Math.abs(pct).toFixed(1).replace('.', ',')}%`
+  return { arrow, text, isUp }
+}
+
 /** Короткий объём: 1 234 567 → 1.23M */
 export function fmtCompact(v: string | number): string {
   const n = typeof v === 'number' ? v : parseFloat(v)

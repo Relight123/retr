@@ -1,4 +1,4 @@
-﻿/** Торговый стор: счёт + ордера + позиции. Хранение — IndexedDB.
+/** Торговый стор: счёт + ордера + позиции. Хранение — IndexedDB.
  *  Вся расчётная логика — чистые функции движка; стор только собирает ввод
  *  (цены, глубина), гоняет backfill/live-проверки и пишет события. */
 import { create } from 'zustand'
@@ -47,6 +47,7 @@ interface TradingState {
   submitOrder: (args: SubmitArgs) => Promise<{ ok: boolean; error?: string }>
   cancelOrder: (id: string, cascadeOco?: boolean) => void
   closePosition: (positionId: string) => void
+  depositCash: (amount: string) => void
 }
 
 const ACCOUNT_KEY = 'account-v1'
@@ -463,6 +464,16 @@ export const useTrading = create<TradingState>((set, get) => {
       buzz(20)
       if (pnl > 0) useCelebrate.getState().celebrate()
       rebindOrderStreams()
+    },
+
+    depositCash: (amount) => {
+      const snap = get().snap
+      if (!snap) return
+      const nextCash = D(snap.cash).add(D(amount)).toFixed(2)
+      const next = { ...snap, cash: nextCash }
+      setSnap(next)
+      useToasts.getState().push('success', `Депозит +$${amount} зачислен`)
+      buzz(15)
     },
   }
 })

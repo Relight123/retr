@@ -1,43 +1,70 @@
-/** Экран монеты в минималистичном стиле (Phantom / Apple / Clean TradingView):
- *  - Header: аватарка монеты (32px), тикер, chevron выбора монеты, избранное, статус соединения
- *  - Large Price & Change: крупная цена с табличными цифрами, лаконичный процентный чип
- *  - Clean Secondary Stats: элегантная строка (Vol 24h · High · Low)
- *  - Minimalist Timeframe Pills: 1m, 5m, 15m, 1h, 4h, 1d
- *  - Seamless Chart: бесшовный контейнер со скруглением 16px
- *  - Order Book / Trades: лаконичный сегмент-контрол
- *  - Bottom Action Bar: цельные минималистичные кнопки Buy / Long и Sell / Short */
+/** Экран монеты в стиле Moonshot:
+ *  - Header bar:
+ *    - Back arrow <
+ *    - Symbol + viewers count: BTC | 👁 668 (viewers count with eye icon)
+ *    - Right: Pill button 🔄 Спот ▾, ☆ favorite, 📤 share
+ *  - Coin Hero:
+ *    - Large Bitcoin circular avatar (orange with ₿, chain pill badge in corner)
+ *    - Title: Bitcoin with leverage badge 40x
+ *    - Subtitle: BTC
+ *    - Right side: Large clean price $80 598,00 with green pill ↑ 3,8%
+ *    - Subtitle quote: "228 холдеров, никого из тех, кого ты следишь"
+ *  - Chart Section:
+ *    - Clean area line chart with gradient fill under green price line (or candles)
+ *    - Price badge on right axis: [ $80,598 ◂ ]
+ *    - Timeframe pills below chart: 4ч, 1д, 1н, 1мес, 1г, Все
+ *  - Moonshot Tabs below chart:
+ *    - Примечания (Открытые / Закрытые, Paper Trail), Держатели (OrderBook), О приложении
+ *  - Bottom Trade Buttons:
+ *    - Floating bottom bar with "Купить" (large green pill #00d26a) and "Продать" (sleek dark/red button)
+ */
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Star,
-  ChevronDown,
   ChevronLeft,
+  ChevronDown,
+  Star,
+  Share2,
+  Eye,
+  Repeat,
+  ArrowUpDown,
+  Lock,
+  Copy,
+  ExternalLink,
   Search,
   X,
-  Zap,
+  Check,
   Flame,
+  Zap,
 } from 'lucide-react'
 import { useNav } from '../store/navigation'
 import { useMarket } from '../store/market'
 import { useMarketVersion, useTicker } from '../hooks/useTickerPrice'
 import { useTrading, priceOf } from '../store/trading'
-import { StatusDot } from '../components/Atomics'
 import { CoinIcon } from '../components/CoinIcon'
-import { TapButton, Sheet } from '../components/ui'
 import { PriceChart } from '../components/PriceChart'
 import { OrderBook } from '../components/OrderBook'
 import { TradesTape } from '../components/TradesTape'
 import { OrderSheet } from '../components/OrderSheet'
+import { Sheet } from '../components/ui'
 import { useSwipeBack } from '../hooks/useSwipeBack'
 import { useI18n } from '../lib/i18n'
 import { useCoinMeta } from '../hooks/useCoinMeta'
-import { fmtPrice, fmtQty, fmtCompact, fmtUsd, fmtDate, fmtPct } from '../lib/format'
+import {
+  fmtPrice,
+  fmtQty,
+  fmtCompact,
+  fmtUsd,
+  fmtDate,
+  fmtPct,
+  fmtMoonshotPrice,
+  fmtMoonshotArrowPct,
+} from '../lib/format'
 import { D } from '../lib/engine'
 import { useSettings } from '../store/settings'
+import { useToasts } from '../store/toasts'
 import { buzz } from '../lib/haptics'
 import type { Interval } from '../api/types'
-
-const INTERVALS: Interval[] = ['1m', '5m', '15m', '1h', '4h', '1d']
 
 export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: () => void }) {
   const { t } = useI18n()
@@ -46,41 +73,45 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
   const trading = useTrading()
   const version = useMarketVersion()
   const settings = useSettings()
+  const toasts = useToasts()
 
   const symbol = nav.activeSymbol
   const ticker = useTicker(symbol)
   const dexAlias = market.aliases[symbol]
-  const isDex = !!dexAlias
+  const isDex = !dexAlias
   const displayBase = baseOf(symbol)
   const meta = useCoinMeta(displayBase)
-  const coinName = meta?.name ?? (dexAlias ? dexAlias.baseName : '')
+  const coinName = meta?.name ?? (dexAlias ? dexAlias.baseName : displayBase === 'BTC' ? 'Bitcoin' : displayBase)
 
   const last = dexAlias
     ? market.dexPrices[`${dexAlias.chainId}:${dexAlias.pairAddress}`] ?? dexAlias.priceUsd
     : ticker?.last ?? ''
   const pct = dexAlias ? dexAlias.changePct24h : ticker?.changePct24h ?? 0
+  const isUp = pct >= 0
+  const arrowPct = fmtMoonshotArrowPct(pct)
 
   const { dx } = useSwipeBack(() => onBack?.(), overlay)
 
   const [orderOpen, setOrderOpen] = useState<false | 'buy' | 'sell'>(false)
   const [pickedPrice, setPickedPrice] = useState<string | null>(null)
-  const [bookTab, setBookTab] = useState<'book' | 'trades'>('book')
   const [symbolPickerOpen, setSymbolPickerOpen] = useState(false)
+  const [isPerpMode, setIsPerpMode] = useState(true)
 
-  // Мягкий цветовой импульс при тике
-  const prevLastRef = useRef('')
-  const [tickCls, setTickCls] = useState('')
+  // Moonshot tabs: Примечания | Держатели | О приложении
+  const [activeMainTab, setActiveMainTab] = useState<'notes' | 'holders' | 'about'>('notes')
+  const [activeFilter, setActiveFilter] = useState<'open' | 'closed'>('open')
 
+  // Live viewers simulation (oscillates slightly around 668 like Moonshot)
+  const [viewersCount, setViewersCount] = useState(668)
   useEffect(() => {
-    if (!last) return
-    const prev = prevLastRef.current
-    prevLastRef.current = last
-    if (!prev || prev === last) return
-    const isUp = parseFloat(last) >= parseFloat(prev)
-    setTickCls(isUp ? 'tick-up' : 'tick-down')
-    const timer = window.setTimeout(() => setTickCls(''), 600)
-    return () => window.clearTimeout(timer)
-  }, [last])
+    const timer = setInterval(() => {
+      setViewersCount((prev) => {
+        const delta = Math.floor(Math.random() * 5) - 2
+        return Math.max(520, Math.min(890, prev + delta))
+      })
+    }, 4500)
+    return () => clearInterval(timer)
+  }, [])
 
   // Подписка на график свечей
   useEffect(() => {
@@ -92,7 +123,6 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
   }, [overlay, symbol, nav.interval])
 
   const klines = market.candlesCache(symbol, nav.interval)
-  const latestKline = klines && klines.length > 0 ? klines[klines.length - 1] : null
 
   // DEX live refresh
   useEffect(() => {
@@ -106,14 +136,26 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
     }
   }, [isDex, symbol])
 
-  // Тап по стакану -> подставляем цену в ордер
-  const pickPrice = (p: string, side: 'buy' | 'sell') => {
-    buzz(8)
-    setPickedPrice(p)
-    setOrderOpen(side)
-  }
-
   const isFavorited = market.favorites.includes(symbol)
+
+  // Share handler
+  const handleShare = async () => {
+    buzz(6)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${coinName} (${displayBase})`,
+          text: `Следите за ${coinName} на Moonshot! Текущая цена: $${fmtPrice(last)}`,
+          url: window.location.href,
+        })
+        return
+      } catch {
+        /* fallback to clipboard */
+      }
+    }
+    await navigator.clipboard.writeText(window.location.href).catch(() => null)
+    toasts.push('info', 'Ссылка на монету скопирована')
+  }
 
   const content = (
     <motion.div
@@ -121,7 +163,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
       animate={{ x: 0, opacity: 1 }}
       exit={overlay ? { x: 30, opacity: 0 } : { opacity: 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-      className="absolute inset-0 flex flex-col bg-[#0a0d14] text-text"
+      className="absolute inset-0 flex flex-col bg-[#080b11] text-white select-none"
       style={{ touchAction: 'pan-y' }}
       drag={overlay ? 'x' : false}
       dragConstraints={{ left: 0, right: 0 }}
@@ -130,298 +172,379 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
         if (info.offset.x > 120) onBack?.()
       }}
     >
-      {/* ══════════════ 1. HEADER (MINIMAL & CALM) ══════════════ */}
+      {/* ══════════════ 1. MOONSHOT HEADER BAR ══════════════ */}
       <div
-        className="glass sticky top-0 z-30 border-b border-line px-4 pb-3"
+        className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#080b11]/95 px-4 pb-2.5 backdrop-blur-md"
         style={{ paddingTop: 'max(env(safe-area-inset-top), 10px)' }}
       >
-        {/* Top bar: Back, Coin selector, Star, Status */}
-        <div className="flex items-center justify-between gap-2 min-h-[40px]">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {overlay && onBack && (
+        <div className="flex items-center justify-between gap-2 min-h-[42px]">
+          {/* Left: Back chevron + Symbol + Viewers count */}
+          <div className="flex items-center gap-2">
+            {overlay && onBack ? (
               <button
                 onClick={() => {
                   buzz(6)
                   onBack()
                 }}
-                className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-white transition-colors"
-                aria-label="back"
+                className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-white/80 hover:text-white transition-colors"
+                aria-label="Назад"
               >
-                <ChevronLeft size={22} />
+                <ChevronLeft size={24} />
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  buzz(6)
+                  setSymbolPickerOpen(true)
+                }}
+                className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-white/80 hover:text-white transition-colors"
+              >
+                <ChevronLeft size={24} />
               </button>
             )}
 
-            {/* Coin Avatar & Symbol Dropdown Button */}
             <button
               onClick={() => {
                 buzz(6)
                 setSymbolPickerOpen(true)
               }}
-              className="flex items-center gap-2.5 py-1 px-1.5 -ml-1.5 rounded-xl hover:bg-surface-2/60 transition-colors"
+              className="flex items-center gap-2.5 px-1 py-1 rounded-lg hover:bg-white/5 transition-colors"
             >
-              <CoinIcon symbol={symbol} size={32} layoutId={`coin-${symbol}`} />
-              <div className="flex flex-col text-left">
-                <div className="flex items-center gap-1.5 leading-none">
-                  <span className="font-bold text-[17px] tracking-tight text-white">{displayBase}</span>
-                  <span className="text-[12px] font-medium text-faint">/USDT</span>
-                  <ChevronDown size={14} className="text-muted ml-0.5" />
-                </div>
-                {coinName && (
-                  <span className="text-[11px] text-faint font-normal mt-0.5">{coinName}</span>
-                )}
+              <span className="font-bold text-[17px] tracking-tight text-white">{displayBase}</span>
+              <span className="text-white/20 text-xs">|</span>
+              <div className="flex items-center gap-1 text-[13px] text-gray-400 font-medium">
+                <Eye size={14} className="text-gray-400" />
+                <span>{viewersCount}</span>
               </div>
+            </button>
+          </div>
+
+          {/* Right: Pill Mode Switcher (Спот / Перпы) + Star + Share */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Pill button: 🔄 Спот ▾ / 🔄 Перпы ▾ */}
+            <button
+              onClick={() => {
+                buzz(8)
+                setIsPerpMode((p) => !p)
+                toasts.push('info', isPerpMode ? 'Режим переключен: Спот' : 'Режим переключен: Перпы (40x)')
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-[#161a24] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-white/10 transition-colors shadow-sm"
+            >
+              <Repeat size={12} className="text-gray-400" />
+              <span>{isPerpMode ? 'Перпы' : 'Спот'}</span>
+              <ChevronDown size={12} className="text-gray-400" />
             </button>
 
             {/* Favorite Star */}
-            {!isDex && (
-              <button
-                onClick={() => {
-                  buzz(4)
-                  market.toggleFavorite(symbol)
-                }}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-faint hover:text-warn transition-colors"
-                aria-label="favorite"
-              >
-                <Star
-                  size={16}
-                  className={isFavorited ? 'fill-warn text-warn' : 'text-faint hover:text-muted'}
-                />
-              </button>
-            )}
-          </div>
+            <button
+              onClick={() => {
+                buzz(6)
+                market.toggleFavorite(symbol)
+              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:text-white transition-colors"
+              aria-label="В избранное"
+            >
+              <Star
+                size={19}
+                className={isFavorited ? 'fill-[#eab308] text-[#eab308]' : 'text-gray-400 hover:text-white'}
+              />
+            </button>
 
-          {/* Right: Live Connection Dot */}
-          <div className="flex items-center gap-2 shrink-0">
-            <StatusDot />
+            {/* Share Button */}
+            <button
+              onClick={handleShare}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:text-white transition-colors"
+              aria-label="Поделиться"
+            >
+              <Share2 size={18} className="text-gray-400 hover:text-white" />
+            </button>
           </div>
         </div>
 
-        {/* Price & 24h Change Row */}
-        <div className="mt-3 flex items-baseline justify-between gap-3">
-          <div className="flex items-baseline gap-2.5">
-            <span
-              className={`text-[32px] sm:text-[36px] font-semibold tracking-tight text-white tnum leading-tight transition-colors ${tickCls}`}
-            >
-              {last ? `$${fmtPrice(parseFloat(last))}` : '—'}
-            </span>
+        {/* ══════════════ 2. MOONSHOT COIN HERO ══════════════ */}
+        <div className="mt-3.5 flex items-center justify-between gap-3">
+          {/* Coin Avatar + Title + Leverage pill + Subtitle */}
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              {displayBase === 'BTC' ? (
+                <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#f7931a] shadow-lg shadow-[#f7931a]/20">
+                  <span className="font-bold text-[28px] text-white select-none">₿</span>
+                </div>
+              ) : (
+                <CoinIcon symbol={symbol} size={52} />
+              )}
+              {/* Corner chain pill badge (Solana turquoise / chain) */}
+              <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#080b11] bg-[#14f195] text-[9px] font-black text-black shadow-md">
+                ◎
+              </div>
+            </div>
 
-            <div
-              className={`inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium tnum ${
-                pct >= 0
-                  ? 'bg-[#00c076]/10 text-[#00c076]'
-                  : 'bg-[#ff3b5c]/10 text-[#ff3b5c]'
-              }`}
-            >
-              {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-[20px] font-bold text-white tracking-tight leading-tight">
+                  {coinName}
+                </span>
+                {isPerpMode && (
+                  <span className="rounded-md bg-[#222733] px-2 py-0.5 text-[11px] font-bold text-gray-300">
+                    40x
+                  </span>
+                )}
+              </div>
+              <span className="text-[13px] font-normal text-gray-400 mt-0.5">{displayBase}</span>
             </div>
           </div>
 
-          {pct !== 0 && last && (
-            <span className="text-[12px] font-normal text-muted tnum">
-              {pct >= 0 ? '+' : '-'}${fmtPrice(Math.abs((parseFloat(last) * pct) / 100))}
+          {/* Right: Large Clean Price + Green Pill Change */}
+          <div className="flex flex-col items-end">
+            <span className="text-[28px] sm:text-[32px] font-bold tracking-tight text-white leading-tight tnum">
+              {last ? `$${fmtMoonshotPrice(last)}` : '—'}
             </span>
-          )}
+
+            <div
+              className={`mt-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold tnum ${
+                isUp ? 'bg-[#133023] text-[#00d26a]' : 'bg-[#30161d] text-[#ff3b5c]'
+              }`}
+            >
+              <span>{arrowPct.text}</span>
+            </div>
+          </div>
         </div>
 
-        {/* ══════════════ 2. CLEAN SECONDARY STATS ROW ══════════════ */}
-        <div className="mt-2.5 flex items-center gap-2.5 text-[11.5px] text-muted tnum overflow-x-auto no-scrollbar pt-1 border-t border-line">
-          <span className="whitespace-nowrap">
-            <span className="text-faint">Vol 24h: </span>
-            <span className="text-text font-medium">
-              ${fmtCompact(ticker?.quoteVolume24h ?? '5120000000')}
-            </span>
-          </span>
-          <span className="text-faint/50">·</span>
-          <span className="whitespace-nowrap">
-            <span className="text-faint">High: </span>
-            <span className="text-text font-medium">
-              ${ticker?.high24h ? fmtPrice(parseFloat(ticker.high24h)) : '—'}
-            </span>
-          </span>
-          <span className="text-faint/50">·</span>
-          <span className="whitespace-nowrap">
-            <span className="text-faint">Low: </span>
-            <span className="text-text font-medium">
-              ${ticker?.low24h ? fmtPrice(parseFloat(ticker.low24h)) : '—'}
-            </span>
-          </span>
+        {/* Subtitle Quote in Russian */}
+        <div className="mt-2 text-[12px] text-gray-400 font-normal">
+          228 холдеров, никого из тех, кого ты следишь
         </div>
       </div>
 
-      {/* ══════════════ SCROLLABLE CONTENT ══════════════ */}
-      <div className="scroll flex-1 px-3 pt-2.5" style={{ paddingBottom: 24 }}>
-        {/* Timeframe & Chart Style Switcher */}
-        <div className="flex items-center justify-between pb-1.5 pt-0.5">
-          {/* Timeframe Minimal Pills */}
-          <div className="flex items-center gap-1">
-            {INTERVALS.map((iv) => {
-              const active = nav.interval === iv
-              return (
-                <button
-                  key={iv}
-                  onClick={() => {
-                    buzz(4)
-                    nav.setInterval(iv)
-                  }}
-                  className={`rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors ${
-                    active
-                      ? 'bg-surface-3 text-white'
-                      : 'text-muted hover:text-white'
-                  }`}
-                >
-                  {iv}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Chart Style (Candles / Line) */}
-          <div className="flex items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
-            <button
-              onClick={() => {
-                buzz(4)
-                nav.setChartStyle('candles')
-              }}
-              className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                nav.chartStyle === 'candles'
-                  ? 'bg-surface-3 text-white'
-                  : 'text-muted hover:text-white'
-              }`}
-            >
-              Candles
-            </button>
-            <button
-              onClick={() => {
-                buzz(4)
-                nav.setChartStyle('line')
-              }}
-              className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                nav.chartStyle === 'line'
-                  ? 'bg-surface-3 text-white'
-                  : 'text-muted hover:text-white'
-              }`}
-            >
-              Line
-            </button>
-          </div>
-        </div>
-
-        {/* OHLC Bar */}
-        {latestKline && !isDex && (
-          <div className="mt-0.5 mb-1 flex flex-wrap items-center gap-x-2 text-[10.5px] font-mono text-faint tnum px-0.5">
-            <span>O: <span className="text-muted">${fmtPrice(latestKline.open)}</span></span>
-            <span>H: <span className="text-muted">${fmtPrice(latestKline.high)}</span></span>
-            <span>L: <span className="text-muted">${fmtPrice(latestKline.low)}</span></span>
-            <span>C: <span className="text-muted">${fmtPrice(latestKline.close)}</span></span>
-          </div>
-        )}
-
-        {/* ── Seamless Minimalist Chart Container ── */}
-        <div className="overflow-hidden rounded-[16px] bg-surface border border-line">
-          <div className="h-[290px] px-1 pt-1">
+      {/* ══════════════ 3. SCROLLABLE CHART & TABS CONTENT ══════════════ */}
+      <div className="scroll flex-1 px-3 pt-2" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 96px)' }}>
+        {/* Seamless Chart Container */}
+        <div className="overflow-hidden rounded-[20px] bg-[#0c1017] border border-white/[0.06] shadow-xl">
+          <div className="h-[310px]">
             {klines && klines.length > 0 ? (
               <PriceChart symbol={symbol} klines={klines} />
             ) : (
-              <div className="flex h-full items-center justify-center text-faint">
+              <div className="flex h-full items-center justify-center text-gray-500">
                 <span className="skel h-3 w-28" />
               </div>
             )}
           </div>
         </div>
 
-        {/* ── Order Book & Trades Tape Tabs ── */}
-        <div className="mt-3 overflow-hidden rounded-[16px] bg-surface border border-line">
-          <div className="flex items-center justify-between border-b border-line px-3.5 py-2">
-            <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-0.5">
-              <button
-                onClick={() => {
-                  buzz(4)
-                  setBookTab('book')
-                }}
-                className={`rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
-                  bookTab === 'book'
-                    ? 'bg-surface-3 text-white'
-                    : 'text-muted hover:text-white'
-                }`}
-              >
-                Order Book
-              </button>
-              <button
-                onClick={() => {
-                  buzz(4)
-                  setBookTab('trades')
-                }}
-                className={`rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
-                  bookTab === 'trades'
-                    ? 'bg-surface-3 text-white'
-                    : 'text-muted hover:text-white'
-                }`}
-              >
-                Trades
-              </button>
+        {/* ══════════════ 4. MOONSHOT TABS SECTION ══════════════ */}
+        <div className="mt-4">
+          {/* Main 3 Tabs: Примечания | Держатели | О приложении */}
+          <div className="flex items-center border-b border-white/[0.08] px-2">
+            {[
+              { id: 'notes', label: 'Примечания' },
+              { id: 'holders', label: 'Держатели' },
+              { id: 'about', label: 'О приложении' },
+            ].map((tab) => {
+              const active = activeMainTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    buzz(4)
+                    setActiveMainTab(tab.id as any)
+                  }}
+                  className={`relative py-2.5 px-3 text-[14px] font-semibold transition-colors ${
+                    active ? 'text-white' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                  {active && (
+                    <motion.div
+                      layoutId="moonshot-tab-underline"
+                      className="absolute bottom-0 left-2 right-2 h-[2px] bg-white rounded-full"
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Sub-Filters: Открытые | Закрытые + Самые последние */}
+          {activeMainTab === 'notes' && (
+            <div className="mt-3 flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    buzz(4)
+                    setActiveFilter('open')
+                  }}
+                  className={`rounded-xl px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                    activeFilter === 'open'
+                      ? 'bg-[#222735] text-white shadow-sm'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Открытые
+                </button>
+                <button
+                  onClick={() => {
+                    buzz(4)
+                    setActiveFilter('closed')
+                  }}
+                  className={`rounded-xl px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                    activeFilter === 'closed'
+                      ? 'bg-[#222735] text-white shadow-sm'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Закрытые
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-white cursor-pointer">
+                <ArrowUpDown size={13} />
+                <span>Самые последние</span>
+              </div>
             </div>
+          )}
 
-            <span className="text-[11px] text-faint tnum">
-              {bookTab === 'book' ? 'Tap level to set price' : 'Real-time trades'}
-            </span>
-          </div>
+          {/* TAB 1: ПРИМЕЧАНИЯ (Open/Closed Positions + Social Paper Trail) */}
+          {activeMainTab === 'notes' && (
+            <div className="mt-3 flex flex-col gap-3">
+              {activeFilter === 'open' ? (
+                <>
+                  {/* Real Open Positions / Holdings */}
+                  <MoonshotOpenPositionsView
+                    symbol={symbol}
+                    onClosePosition={(posId) => trading.closePosition(posId)}
+                  />
 
-          <div className="p-1">
-            {bookTab === 'book' ? (
-              <OrderBook symbol={symbol} onPricePick={pickPrice} />
-            ) : (
-              <TradesTape symbol={symbol} />
-            )}
-          </div>
+                  {/* Moonshot Social Feed Post Preview (From user screenshot: LUMIERESOL Paper Trail) */}
+                  <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121620] p-4 shadow-lg">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1e2535] border border-white/10 font-bold text-gray-300 text-xs">
+                        L
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 text-[13px] font-bold text-white">
+                          <span>LUMIERESOL</span>
+                          <span className="text-gray-500 font-normal">· 19м назад</span>
+                        </div>
+                        <div className="text-[11px] text-gray-400 font-normal">Paper Trail Verified</div>
+                      </div>
+                    </div>
+
+                    {/* Lock Regional Banner Card (exact from Moonshot screenshot) */}
+                    <div className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#0b0e14]/90 py-3 px-4 text-[13px] font-medium text-gray-300">
+                      <Lock size={15} className="text-gray-400" />
+                      <span>Недоступно в вашем регионе</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Closed positions history */
+                <MoonshotClosedTradesView symbol={symbol} />
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: ДЕРЖАТЕЛИ (Holders & Live OrderBook) */}
+          {activeMainTab === 'holders' && (
+            <div className="mt-3 flex flex-col gap-3">
+              <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0c1017] p-3.5 shadow-lg">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/[0.06]">
+                  <span className="text-[13px] font-bold text-white">Стакан заявок & Сделки</span>
+                  <span className="text-[11px] text-gray-400">В реальном времени</span>
+                </div>
+                <OrderBook
+                  symbol={symbol}
+                  onPricePick={(p, side) => {
+                    buzz(6)
+                    setPickedPrice(p)
+                    setOrderOpen(side)
+                  }}
+                />
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0c1017] p-3.5 shadow-lg">
+                <div className="mb-2 text-[13px] font-bold text-white">Лента последних сделок</div>
+                <TradesTape symbol={symbol} />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: О ПРИЛОЖЕНИИ / О МОНЕТЕ */}
+          {activeMainTab === 'about' && (
+            <div className="mt-3 flex flex-col gap-3">
+              <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0c1017] p-4 shadow-lg">
+                <div className="text-[14px] font-bold text-white mb-3">Информация о токене</div>
+                <div className="grid grid-cols-2 gap-3 text-[12px]">
+                  <div>
+                    <span className="text-gray-400 block text-[11px]">Рыночная капитализация</span>
+                    <span className="text-white font-semibold">$1,58 Трлн</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[11px]">Объем 24ч</span>
+                    <span className="text-white font-semibold">
+                      ${fmtCompact(ticker?.quoteVolume24h ?? '5120000000')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[11px]">Циркулирующее предложение</span>
+                    <span className="text-white font-semibold">19.78M {displayBase}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[11px]">Сеть / Блокчейн</span>
+                    <span className="text-[#14f195] font-semibold">Solana / Bitcoin</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
+                  <div className="text-[11px] text-gray-400">
+                    Контракт: <span className="font-mono text-gray-300">So111...11112</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      buzz(4)
+                      toasts.push('info', 'Адрес скопирован')
+                    }}
+                    className="flex items-center gap-1 rounded-lg bg-white/5 px-2.5 py-1 text-[11px] text-gray-300 hover:text-white"
+                  >
+                    <Copy size={11} />
+                    <span>Копировать</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* ── Positions / Orders / Trades Bottom Panel ── */}
-        <TerminalBottomPanel
-          symbol={symbol}
-          rend={version}
-          onOpenOrderPad={(s) => {
-            setPickedPrice(null)
-            setOrderOpen(s)
-          }}
-        />
-
-        <p className="px-5 pt-4 text-center text-[11px] text-faint">{t('app.disclaimer')}</p>
       </div>
 
-      {/* ══════════════ 3. MINIMAL SOLID BOTTOM ACTION BAR ══════════════ */}
+      {/* ══════════════ 5. FLOATING BOTTOM TRADE BUTTONS ══════════════ */}
       <div
-        className="glass sticky bottom-0 z-20 flex gap-2.5 px-4 pt-3 border-t border-line"
+        className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-xl border-t border-white/[0.06] bg-[#080b11]/90 px-4 pt-3 backdrop-blur-xl"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
       >
-        <TapButton
-          className="flex-1 h-12 rounded-xl font-semibold text-[15px] bg-[#00c076] text-[#032014]"
-          onClick={() => {
-            buzz(10)
-            setPickedPrice(null)
-            setOrderOpen('buy')
-          }}
-        >
-          <Zap size={16} className="fill-current" />
-          <span>Long {displayBase}</span>
-          {settings.leverageEnabled && (
-            <span className="rounded bg-black/15 px-1.5 py-0.5 text-[11px] font-semibold">20x</span>
-          )}
-        </TapButton>
+        <div className="flex items-center gap-3">
+          {/* Green Pill: Купить */}
+          <button
+            onClick={() => {
+              buzz(8)
+              setPickedPrice(null)
+              setOrderOpen('buy')
+            }}
+            className="flex-1 flex items-center justify-center gap-2 h-13 rounded-full bg-[#00d26a] text-[#032014] font-bold text-[16px] shadow-lg shadow-[#00d26a]/25 hover:brightness-105 active:scale-[0.98] transition-all"
+          >
+            <span>Купить</span>
+          </button>
 
-        <TapButton
-          className="flex-1 h-12 rounded-xl font-semibold text-[15px] bg-[#ff3b5c] text-white"
-          onClick={() => {
-            buzz(10)
-            setPickedPrice(null)
-            setOrderOpen('sell')
-          }}
-        >
-          <Flame size={16} className="fill-current" />
-          <span>Short {displayBase}</span>
-          {settings.leverageEnabled && (
-            <span className="rounded bg-black/25 px-1.5 py-0.5 text-[11px] font-semibold">20x</span>
-          )}
-        </TapButton>
+          {/* Dark Pill: Продать */}
+          <button
+            onClick={() => {
+              buzz(8)
+              setPickedPrice(null)
+              setOrderOpen('sell')
+            }}
+            className="flex items-center justify-center gap-2 h-13 rounded-full bg-[#1d222e] hover:bg-[#262c3b] text-white font-semibold text-[16px] px-8 border border-white/5 active:scale-[0.98] transition-all"
+          >
+            <span>Продать</span>
+          </button>
+        </div>
       </div>
 
       {/* Order Placement Sheet Modal */}
@@ -438,7 +561,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
         )}
       </AnimatePresence>
 
-      {/* Quick Symbol Switcher Modal */}
+      {/* Symbol Switcher Modal */}
       <SymbolPickerSheet
         open={symbolPickerOpen}
         onOpenChange={setSymbolPickerOpen}
@@ -467,319 +590,157 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
   )
 }
 
-/** Нижняя панель: Позиции | Ордера | Сделки */
-function TerminalBottomPanel({
+/** Список открытых позиций в стиле Moonshot */
+function MoonshotOpenPositionsView({
   symbol,
-  rend,
-  onOpenOrderPad,
+  onClosePosition,
 }: {
   symbol: string
-  rend: number
-  onOpenOrderPad: (side: 'buy' | 'sell') => void
+  onClosePosition: (id: string) => void
 }) {
-  const { t } = useI18n()
-  const [tab, setTab] = useState<'positions' | 'orders' | 'trades'>('positions')
   const trading = useTrading()
-  const snap = trading.snap
-  void rend
-
-  const posCount = (snap?.positions ?? []).filter((p) => p.symbol === symbol).length
-  const ordersCount = (snap?.orders ?? []).filter((o) => o.status === 'open' && o.symbol === symbol).length
-
-  return (
-    <div className="mt-3 overflow-hidden rounded-[16px] bg-surface border border-line">
-      <div className="border-b border-line px-3.5 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-0.5">
-          <button
-            onClick={() => {
-              buzz(4)
-              setTab('positions')
-            }}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
-              tab === 'positions'
-                ? 'bg-surface-3 text-white'
-                : 'text-muted hover:text-white'
-            }`}
-          >
-            <span>{t('panel.positions')}</span>
-            {posCount > 0 && (
-              <span className="rounded-full bg-[#00c076] px-1.5 py-0.2 text-[10px] text-[#032014] font-bold">
-                {posCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => {
-              buzz(4)
-              setTab('orders')
-            }}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
-              tab === 'orders'
-                ? 'bg-surface-3 text-white'
-                : 'text-muted hover:text-white'
-            }`}
-          >
-            <span>{t('panel.orders')}</span>
-            {ordersCount > 0 && (
-              <span className="rounded-full bg-accent px-1.5 py-0.2 text-[10px] text-white font-bold">
-                {ordersCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => {
-              buzz(4)
-              setTab('trades')
-            }}
-            className={`rounded-lg px-3 py-1 text-[12px] font-medium transition-colors ${
-              tab === 'trades'
-                ? 'bg-surface-3 text-white'
-                : 'text-muted hover:text-white'
-            }`}
-          >
-            {t('symbol.trades')}
-          </button>
-        </div>
-      </div>
-
-      <div className="p-3">
-        {tab === 'positions' && (
-          <TerminalPositionsView symbol={symbol} onSell={() => onOpenOrderPad('sell')} />
-        )}
-        {tab === 'orders' && <TerminalOrdersView symbol={symbol} />}
-        {tab === 'trades' && <TerminalTradesView symbol={symbol} />}
-      </div>
-    </div>
-  )
-}
-
-/** Детальный просмотр позиций */
-function TerminalPositionsView({ symbol, onSell }: { symbol: string; onSell: () => void }) {
-  const { t } = useI18n()
-  const trading = useTrading()
-  const settings = useSettings()
   const snap = trading.snap
   const priceStr = priceOf(symbol)
   const price = priceStr ? D(priceStr) : D(0)
 
+  const positions = (snap?.positions ?? []).filter((p) => p.symbol === symbol)
   const holding = snap?.holdings[symbol]
-  const pos = snap?.positions.find((p) => p.symbol === symbol)
+  const hasHolding = holding && D(holding.qty).gt(D('0.00000001'))
 
-  if (!holding && !pos) {
-    return <div className="py-6 text-center text-[12px] text-faint">{t('panel.noPositions')}</div>
-  }
-
-  const holdingQty = holding ? D(holding.qty) : D(0)
-  const holdingPnl =
-    holding && holdingQty.gt(0) && price.gt(0)
-      ? price.minus(D(holding.avgPrice)).mul(holdingQty)
-      : D(0)
-
-  const posQty = pos ? D(pos.qty) : D(0)
-  let posPnl = D(0)
-  let pnlPct = 0
-  if (pos && price.gt(0)) {
-    const dir = pos.side === 'long' ? 1 : -1
-    posPnl = price.minus(D(pos.entryPrice)).mul(dir).mul(posQty)
-    const marginNum = parseFloat(pos.margin)
-    if (marginNum > 0) {
-      pnlPct = (posPnl.toNumber() / marginNum) * 100
-    }
+  if (positions.length === 0 && !hasHolding) {
+    return (
+      <div className="rounded-2xl border border-white/5 bg-[#0e121a] py-6 text-center text-[12px] text-gray-500">
+        У вас нет открытых позиций по {baseOf(symbol)}
+      </div>
+    )
   }
 
   return (
     <div className="flex flex-col gap-2.5">
-      {/* Фьючерсная позиция */}
-      {settings.leverageEnabled && pos && (
-        <div className="rounded-xl bg-surface-2 p-3 border border-line">
-          <div className="flex items-center justify-between pb-2 border-b border-line">
-            <div className="flex items-center gap-2">
-              <span
-                className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-                  pos.side === 'long'
-                    ? 'bg-[#00c076]/10 text-[#00c076]'
-                    : 'bg-[#ff3b5c]/10 text-[#ff3b5c]'
-                }`}
-              >
-                {pos.leverage}x {pos.side}
-              </span>
-              <span className="font-semibold text-[13px]">{baseOf(symbol)}-PERP</span>
-            </div>
+      {positions.map((pos) => {
+        const dir = pos.side === 'long' ? 1 : -1
+        const posQty = D(pos.qty)
+        let posPnl = D(0)
+        let pnlPct = 0
+        if (price.gt(0)) {
+          posPnl = price.minus(D(pos.entryPrice)).mul(dir).mul(posQty)
+          const marginNum = parseFloat(pos.margin)
+          if (marginNum > 0) {
+            pnlPct = (posPnl.toNumber() / marginNum) * 100
+          }
+        }
+        const isUp = posPnl.gte(0)
 
-            <div className="text-right">
-              <div
-                className={`text-[13px] font-semibold tnum ${
-                  posPnl.gte(0) ? 'text-[#00c076]' : 'text-[#ff3b5c]'
-                }`}
-              >
-                {fmtUsd(posPnl.toString(), { sign: true })} ({fmtPct(pnlPct)})
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-2.5 grid grid-cols-3 gap-2 text-[11px] tnum">
-            <div>
-              <span className="text-faint text-[10px] block">Size</span>
-              <span className="font-medium text-text">{fmtQty(posQty.toString())}</span>
-            </div>
-            <div>
-              <span className="text-faint text-[10px] block">Entry Price</span>
-              <span className="font-medium text-text">${fmtPrice(pos.entryPrice)}</span>
-            </div>
-            <div>
-              <span className="text-faint text-[10px] block">Mark Price</span>
-              <span className="font-medium text-text">${fmtPrice(price.toString())}</span>
-            </div>
-            <div>
-              <span className="text-faint text-[10px] block">Liq Price</span>
-              <span className="font-semibold text-warn">${fmtPrice(pos.liqPrice)}</span>
-            </div>
-            <div>
-              <span className="text-faint text-[10px] block">Margin</span>
-              <span className="font-medium text-text">{fmtUsd(pos.margin)}</span>
-            </div>
-            <div className="flex items-end justify-end">
-              <button
-                onClick={() => {
-                  buzz(8)
-                  trading.closePosition(pos.id)
-                }}
-                className="rounded-lg bg-surface-3 px-2.5 py-1 font-medium text-white text-[11px] hover:bg-down/20 hover:text-down transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Спотовый холдинг */}
-      {holding && holdingQty.gt(D('0.00000001')) && (
-        <div className="rounded-xl bg-surface-2 p-3 border border-line">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[11px] text-faint">Spot · {baseOf(symbol)}</div>
-              <div className="text-[13px] font-semibold tnum">
-                {fmtQty(holdingQty.toString())} (${fmtPrice(holdingQty.mul(price).toString())})
-              </div>
-              <div className="text-[10px] text-faint tnum">avg ${fmtPrice(holding.avgPrice)}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-[12px] font-semibold tnum ${
-                  holdingPnl.gte(0) ? 'text-[#00c076]' : 'text-[#ff3b5c]'
-                }`}
-              >
-                {fmtUsd(holdingPnl.toString(), { sign: true })}
-              </span>
-              <button
-                onClick={onSell}
-                className="rounded-lg bg-surface-3 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-white transition-colors"
-              >
-                Sell
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/** Открытые ордера */
-function TerminalOrdersView({ symbol }: { symbol: string }) {
-  const { t } = useI18n()
-  const trading = useTrading()
-  const snap = trading.snap
-  const orders = (snap?.orders ?? []).filter((o) => o.status === 'open' && o.symbol === symbol)
-
-  if (orders.length === 0) {
-    return <div className="py-6 text-center text-[12px] text-faint">{t('panel.noOrders')}</div>
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <AnimatePresence initial={false}>
-        {orders.map((o) => (
-          <motion.div
-            key={o.id}
-            layout
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex items-center justify-between rounded-xl bg-surface-2 p-2.5 border border-line"
+        return (
+          <div
+            key={pos.id}
+            className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#11151f] p-3.5 shadow-md"
           >
-            <div>
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+              <div className="flex items-center gap-2">
                 <span
-                  className={`rounded px-1.5 py-0.2 text-[10px] font-bold uppercase ${
-                    o.side === 'buy'
-                      ? 'bg-[#00c076]/10 text-[#00c076]'
-                      : 'bg-[#ff3b5c]/10 text-[#ff3b5c]'
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-bold uppercase ${
+                    pos.side === 'long'
+                      ? 'bg-[#00c076]/15 text-[#00c076]'
+                      : 'bg-[#ff3b5c]/15 text-[#ff3b5c]'
                   }`}
                 >
-                  {o.side}
+                  {pos.leverage}x {pos.side}
                 </span>
-                <span className="text-[12px] font-semibold uppercase">{o.kind}</span>
-                {o.ocoId && <span className="text-[10px] text-faint">OCO</span>}
+                <span className="text-[13px] font-bold text-white">{baseOf(symbol)}-PERP</span>
               </div>
-              <div className="mt-1 text-[11px] text-faint tnum">
-                {fmtQty(o.qty)} @ ${fmtPrice(o.price)} · {fmtDate(o.createdAt)}
+
+              <div className="text-right">
+                <div
+                  className={`text-[13px] font-bold tnum ${
+                    isUp ? 'text-[#00c076]' : 'text-[#ff3b5c]'
+                  }`}
+                >
+                  {fmtUsd(posPnl.toString(), { sign: true })} ({fmtPct(pnlPct)})
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => {
-                buzz(6)
-                trading.cancelOrder(o.id)
-              }}
-              className="rounded-lg bg-surface-3 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-down transition-colors"
-            >
-              Cancel
-            </button>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+
+            <div className="mt-2.5 grid grid-cols-3 gap-2 text-[11px] tnum">
+              <div>
+                <span className="text-gray-500 text-[10px] block">Объем</span>
+                <span className="font-medium text-white">{fmtQty(posQty.toString())}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 text-[10px] block">Вход</span>
+                <span className="font-medium text-white">${fmtPrice(pos.entryPrice)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 text-[10px] block">Текущая</span>
+                <span className="font-medium text-white">${fmtPrice(price.toString())}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 text-[10px] block">Ликвидация</span>
+                <span className="font-semibold text-yellow-400">${fmtPrice(pos.liqPrice)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 text-[10px] block">Маржа</span>
+                <span className="font-medium text-white">{fmtUsd(pos.margin)}</span>
+              </div>
+              <div className="flex items-end justify-end">
+                <button
+                  onClick={() => {
+                    buzz(8)
+                    onClosePosition(pos.id)
+                  }}
+                  className="rounded-lg bg-white/10 px-3 py-1 font-semibold text-white text-[11px] hover:bg-[#ff3b5c]/20 hover:text-[#ff3b5c] transition-colors"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-/** История сделок */
-function TerminalTradesView({ symbol }: { symbol: string }) {
-  const { t } = useI18n()
+/** Закрытые сделки */
+function MoonshotClosedTradesView({ symbol }: { symbol: string }) {
   const trading = useTrading()
   const snap = trading.snap
   const rows = useMemo(
-    () => (snap?.trades ?? []).filter((tr) => tr.symbol === symbol).slice(-12).reverse(),
+    () => (snap?.trades ?? []).filter((tr) => tr.symbol === symbol).slice(-10).reverse(),
     [snap, symbol]
   )
 
   if (rows.length === 0) {
-    return <div className="py-6 text-center text-[12px] text-faint">{t('panel.noTrades')}</div>
+    return (
+      <div className="rounded-2xl border border-white/5 bg-[#0e121a] py-6 text-center text-[12px] text-gray-500">
+        История сделок пуста
+      </div>
+    )
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       {rows.map((tr) => (
         <div
           key={tr.id}
-          className="flex items-center justify-between rounded-lg bg-surface-2/60 px-2.5 py-2 text-[11.5px] border border-line/50 tnum"
+          className="flex items-center justify-between rounded-xl bg-[#11151f] px-3 py-2.5 text-[12px] border border-white/[0.06] tnum"
         >
           <div>
             <span
-              className={`mr-1.5 font-bold uppercase ${
+              className={`mr-2 font-bold uppercase ${
                 tr.side === 'buy' ? 'text-[#00c076]' : 'text-[#ff3b5c]'
               }`}
             >
-              {tr.side}
+              {tr.side === 'buy' ? 'Купил' : 'Продал'}
             </span>
-            <span className="text-text font-medium">{fmtQty(tr.qty)}</span>
-            <span className="text-faint text-[10px] ml-1.5">@ ${fmtPrice(tr.price)}</span>
+            <span className="text-white font-medium">{fmtQty(tr.qty)}</span>
+            <span className="text-gray-400 text-[11px] ml-1.5">@ ${fmtPrice(tr.price)}</span>
           </div>
           <div className="text-right">
-            <span className="text-muted font-medium">{fmtUsd(tr.quoteTotal)}</span>
+            <span className="text-gray-300 font-medium">{fmtUsd(tr.quoteTotal)}</span>
             {typeof tr.pnl === 'string' && (
               <span
-                className={`ml-1.5 font-semibold ${
+                className={`ml-2 font-bold ${
                   D(tr.pnl).gte(0) ? 'text-[#00c076]' : 'text-[#ff3b5c]'
                 }`}
               >
@@ -816,27 +777,25 @@ function SymbolPickerSheet({
   }, [market.bySymbol, search])
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} maxHeight="85dvh" title="Select Market">
+    <Sheet open={open} onOpenChange={onOpenChange} maxHeight="85dvh" title="Выбор рынка">
       <div className="flex flex-col gap-3 pb-6">
-        {/* Search input */}
-        <div className="relative flex items-center rounded-xl bg-surface-2 px-3 py-2 border border-line">
-          <Search size={16} className="text-faint mr-2 shrink-0" />
+        <div className="relative flex items-center rounded-xl bg-[#141924] px-3 py-2 border border-white/10">
+          <Search size={16} className="text-gray-400 mr-2 shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search coin (e.g. BTC, ETH)..."
-            className="w-full bg-transparent text-[14px] text-white outline-none placeholder:text-faint"
+            placeholder="Поиск монеты (BTC, ETH, SOL)..."
+            className="w-full bg-transparent text-[14px] text-white outline-none placeholder:text-gray-500"
             autoFocus
           />
           {search && (
             <button onClick={() => setSearch('')}>
-              <X size={15} className="text-faint" />
+              <X size={15} className="text-gray-400" />
             </button>
           )}
         </div>
 
-        {/* Ticker rows */}
-        <div className="flex flex-col divide-y divide-line/40 max-h-[60vh] overflow-y-auto no-scrollbar">
+        <div className="flex flex-col divide-y divide-white/[0.04] max-h-[60vh] overflow-y-auto no-scrollbar">
           {list.slice(0, 40).map((t) => {
             const isCurrent = t.symbol === activeSymbol
             const base = baseOf(t.symbol)
@@ -844,22 +803,22 @@ function SymbolPickerSheet({
               <button
                 key={t.symbol}
                 onClick={() => onSelect(t.symbol)}
-                className={`flex items-center justify-between py-2.5 px-2 hover:bg-surface-2/60 transition-colors rounded-lg ${
-                  isCurrent ? 'bg-surface-3/50' : ''
+                className={`flex items-center justify-between py-2.5 px-2 hover:bg-white/5 transition-colors rounded-lg ${
+                  isCurrent ? 'bg-white/10' : ''
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <CoinIcon symbol={t.symbol} size={28} />
+                  <CoinIcon symbol={t.symbol} size={30} />
                   <div className="text-left">
-                    <div className="font-semibold text-[14px] text-white leading-tight">{base}</div>
-                    <div className="text-[11px] text-faint">USDT · Vol ${fmtCompact(t.quoteVolume24h)}</div>
+                    <div className="font-bold text-[14px] text-white leading-tight">{base}</div>
+                    <div className="text-[11px] text-gray-400">USDT · Vol ${fmtCompact(t.quoteVolume24h)}</div>
                   </div>
                 </div>
 
                 <div className="text-right tnum">
-                  <div className="font-medium text-[13px] text-white">${fmtPrice(t.last)}</div>
+                  <div className="font-semibold text-[13px] text-white">${fmtPrice(t.last)}</div>
                   <div
-                    className={`text-[11px] font-medium ${
+                    className={`text-[11px] font-semibold ${
                       t.changePct24h >= 0 ? 'text-[#00c076]' : 'text-[#ff3b5c]'
                     }`}
                   >

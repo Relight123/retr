@@ -31,6 +31,7 @@ export function CoinIcon({
   layoutId,
   className = '',
   style,
+  rounded = 'full',
 }: {
   symbol: string
   size?: number
@@ -38,6 +39,7 @@ export function CoinIcon({
   layoutId?: string
   className?: string
   style?: React.CSSProperties
+  rounded?: 'full' | '2xl' | 'xl' | 'lg' | string
 }) {
   // Strip USDT suffix for meta lookup and base ticker
   const base = cleanCoinSymbol(symbol) || symbol
@@ -107,16 +109,32 @@ export function CoinIcon({
   const colors = HUES[hash32(baseForIcon || symbol) % HUES.length]
   const letter = (baseForIcon || base || symbol).slice(0, 1).toUpperCase() || '?'
 
+  const isFull = rounded === 'full'
+  const radiusClass =
+    rounded === '2xl'
+      ? 'rounded-2xl'
+      : rounded === 'xl'
+      ? 'rounded-xl'
+      : rounded === 'lg'
+      ? 'rounded-lg'
+      : isFull
+      ? 'rounded-full'
+      : rounded
+
+  const radiusStyle = isFull ? '50%' : rounded === '2xl' ? '16px' : rounded === 'xl' ? '12px' : rounded === 'lg' ? '8px' : undefined
+
+  const Tag = layoutId ? motion.span : 'span'
+
   return (
-    <motion.span
-      layoutId={layoutId}
-      className={`relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full ${className}`}
+    <Tag
+      {...(layoutId ? { layoutId } : {})}
+      className={`relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden ${radiusClass} ${className}`}
       style={{
         width: size,
         height: size,
         minWidth: size,
         minHeight: size,
-        borderRadius: '50%',
+        borderRadius: radiusStyle,
         border: '1px solid rgba(255, 255, 255, 0.12)',
         boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
         background: currentUrl
@@ -133,7 +151,7 @@ export function CoinIcon({
           {/* Shimmer pulse while loading */}
           {!loaded && (
             <span
-              className="absolute inset-0 animate-pulse rounded-full pointer-events-none"
+              className={`absolute inset-0 animate-pulse pointer-events-none ${radiusClass}`}
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
               }}
@@ -149,7 +167,7 @@ export function CoinIcon({
             draggable={false}
             onLoad={handleLoad}
             onError={handleError}
-            className="h-full w-full rounded-full object-cover"
+            className={`h-full w-full object-cover ${radiusClass}`}
             style={{
               opacity: loaded ? 1 : 0,
               transform: loaded ? 'scale(1)' : 'scale(0.92)',
@@ -169,6 +187,6 @@ export function CoinIcon({
           {letter}
         </span>
       )}
-    </motion.span>
+    </Tag>
   )
 }
