@@ -4,12 +4,12 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: './', // Для корректной работы на GitHub Pages и любых поддоменах
+  base: '/retr/', // Базовый путь для GitHub Pages: https://relight123.github.io/retr/
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png', '.nojekyll'],
       manifest: {
         name: 'Paper Trading — симулятор трейдинга',
         short_name: 'Paper',
@@ -18,26 +18,26 @@ export default defineConfig({
         lang: 'ru',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: './',
-        scope: './',
+        start_url: '/retr/',
+        scope: '/retr/',
         theme_color: '#0B0E14',
         background_color: '#0B0E14',
         categories: ['finance', 'education'],
         icons: [
           {
-            src: '/icons/pwa-192.png',
+            src: 'icons/pwa-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/icons/pwa-512.png',
+            src: 'icons/pwa-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/icons/maskable-512.png',
+            src: 'icons/maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

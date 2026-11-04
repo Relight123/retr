@@ -2,6 +2,7 @@
   "name": "paper-trading",
   "private": true,
   "version": "1.0.0",
+  "homepage": "https://relight123.github.io/retr",
   "type": "module",
   "description": "PWA-симулятор трейдинга криптовалютой на виртуальном счёте с реальными рыночными данными",
   "scripts": {
@@ -12,7 +13,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "deploy": "gh-pages -d dist --dotfiles"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.0",
@@ -33,6 +35,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
+    "gh-pages": "^6.3.0",
     "postcss": "^8.4.47",
     "sharp": "^0.33.5",
     "tailwindcss": "^3.4.13",
