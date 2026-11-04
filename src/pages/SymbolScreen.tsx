@@ -175,7 +175,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
       {/* ══════════════ 1. MOONSHOT HEADER BAR ══════════════ */}
       <div
         className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#080b11]/95 px-4 pb-2.5 backdrop-blur-md"
-        style={{ paddingTop: 'max(env(safe-area-inset-top), 10px)' }}
+        style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 10px) + 8px)' }}
       >
         <div className="flex items-center justify-between gap-2 min-h-[42px]">
           {/* Left: Back chevron + Symbol + Viewers count */}

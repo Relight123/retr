@@ -70,7 +70,7 @@ export function Header({
     <header
       className="sticky top-0 z-30 border-b border-white/[0.04] bg-surface/80 px-4 pb-2.5 select-none"
       style={{
-        paddingTop: 'max(env(safe-area-inset-top), 8px)',
+        paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 8px) + 8px)',
         WebkitBackdropFilter: 'blur(20px)',
         backdropFilter: 'blur(20px)',
       }}

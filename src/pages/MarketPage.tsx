@@ -355,7 +355,10 @@ export function MarketPage() {
     return (
       <div className="flex h-full flex-col bg-black text-white">
         {/* Skeleton Header */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div
+          className="flex items-center justify-between px-4 pb-2"
+          style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 12px) + 8px)' }}
+        >
           <div className="flex items-center gap-2.5">
             <div className="h-11 w-11 rounded-full skel" />
             <div>
@@ -373,7 +376,10 @@ export function MarketPage() {
   return (
     <div className="relative flex h-full flex-col bg-[#050507] text-white">
       {/* 1. TOP HEADER MOONSHOT */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-2 select-none border-b border-white/[0.04]">
+      <div
+        className="flex items-center justify-between px-4 pb-2.5 select-none border-b border-white/[0.04]"
+        style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 12px) + 8px)' }}
+      >
         {/* Left: Moonshot circular bean avatar + Balance */}
         <div className="flex items-center gap-3">
           <button

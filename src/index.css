@@ -331,7 +331,7 @@ img {
 }
 
 .pt-safe {
-  padding-top: env(safe-area-inset-top);
+  padding-top: calc(max(env(safe-area-inset-top, 0px), 12px) + 8px);
 }
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);

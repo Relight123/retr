@@ -160,7 +160,7 @@ export function PortfolioPage() {
         {/* Top Action Bar on Banner: 🎁 Пригласить + Right circle buttons */}
         <div
           className="relative z-10 flex items-center justify-between px-4"
-          style={{ paddingTop: 'max(env(safe-area-inset-top), 10px)' }}
+          style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 10px) + 8px)' }}
         >
           {/* Invite Pill Button */}
           <button
