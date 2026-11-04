@@ -1,0 +1,48 @@
+{
+  "name": "paper-trading",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "PWA-симулятор трейдинга криптовалютой на виртуальном счёте с реальными рыночными данными",
+  "scripts": {
+    "predev": "node scripts/generate-icons.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/generate-icons.mjs",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.1.0",
+    "@tanstack/react-virtual": "^3.10.8",
+    "decimal.js": "^10.4.3",
+    "framer-motion": "^11.11.9",
+    "idb": "^8.0.1",
+    "lightweight-charts": "^4.1.4",
+    "lucide-react": "^0.451.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vaul": "^0.9.9",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "sharp": "^0.33.5",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.9",
+    "vite-plugin-pwa": "^0.20.5",
+    "vitest": "^2.1.2"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true,
+    "sharp@0.33.5": true
+  }
+}

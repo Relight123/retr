@@ -1,0 +1,531 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════ Дизайн-токены ═══════════════ */
+:root,
+[data-theme='dark'] {
+  --bg: #080b11;
+  --surface: #0f1218;
+  --surface-2: #151a23;
+  --surface-3: #1a2030;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(235, 240, 255, 0.14);
+  --text: #e8ecf6;
+  --muted: #9aa3b8;
+  --faint: #5e6678;
+  --accent: #5b7bfe;
+  --accent-2: #00d1b2;
+  --accent-soft: rgba(91, 123, 254, 0.14);
+  --up: #00d26a;
+  --down: #ff3b5c;
+  --warn: #efa62e;
+  --glass: rgba(8, 11, 17, 0.72);
+  --glass-strong: rgba(8, 11, 17, 0.88);
+  --skeleton-a: rgba(235, 240, 255, 0.05);
+  --skeleton-b: rgba(235, 240, 255, 0.12);
+  --shadow-card: 0 12px 32px -16px rgba(0, 0, 0, 0.55);
+  --shadow-float: 0 18px 44px -18px rgba(0, 0, 0, 0.7);
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme='light'] {
+  --bg: #f0f2f8;
+  --surface: #ffffff;
+  --surface-2: #f5f7fc;
+  --surface-3: #eaeef7;
+  --line: rgba(10, 15, 35, 0.08);
+  --line-strong: rgba(10, 15, 35, 0.14);
+  --text: #0d1024;
+  --muted: #5a6276;
+  --faint: #96a0b4;
+  --accent: #4a68f0;
+  --accent-2: #00b89e;
+  --accent-soft: rgba(74, 104, 240, 0.10);
+  --up: #00b85c;
+  --down: #f03050;
+  --warn: #de9112;
+  --glass: rgba(255, 255, 255, 0.68);
+  --glass-strong: rgba(255, 255, 255, 0.86);
+  --skeleton-a: rgba(10, 15, 35, 0.05);
+  --skeleton-b: rgba(10, 15, 35, 0.12);
+  --shadow-card: 0 10px 30px -18px rgba(16, 20, 42, 0.30);
+  --shadow-float: 0 16px 40px -20px rgba(16, 20, 42, 0.35);
+}
+
+/* Плавный кроссфейд темы через View Transitions API */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* ═══════════════ База ═══════════════ */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+  scrollbar-gutter: stable;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter Variable', Inter, system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  /* iOS: запрещаем зум по двойному тапу / pinch страницы */
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body,
+button,
+input,
+select,
+textarea,
+[role='button'] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea {
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
+/* iOS авто-зум: input не меньше 16px */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+button {
+  touch-action: manipulation;
+  -webkit-user-drag: none;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* ═══════════════ Утилиты ═══════════════ */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Вспышка цены при тике: импульс цвета + микро-масштаб */
+.tick-up {
+  animation: tickFlashUp 0.55s ease-out;
+}
+.tick-down {
+  animation: tickFlashDown 0.55s ease-out;
+}
+@keyframes tickFlashUp {
+  0% {
+    color: var(--up);
+    transform: scale(1.04);
+  }
+  100% {
+    color: var(--text);
+    transform: scale(1);
+  }
+}
+@keyframes tickFlashDown {
+  0% {
+    color: var(--down);
+    transform: scale(1.04);
+  }
+  100% {
+    color: var(--text);
+    transform: scale(1);
+  }
+}
+
+/* ── Glow утилиты ── */
+.glow-up {
+  box-shadow: 0 0 18px rgba(0, 210, 106, 0.18), 0 0 4px rgba(0, 210, 106, 0.10);
+}
+.glow-down {
+  box-shadow: 0 0 18px rgba(255, 59, 92, 0.18), 0 0 4px rgba(255, 59, 92, 0.10);
+}
+
+/* ── Price flash: фоновый пульс при изменении цены ── */
+.price-flash-up {
+  animation: priceFlashUp 0.6s ease-out;
+}
+.price-flash-down {
+  animation: priceFlashDown 0.6s ease-out;
+}
+@keyframes priceFlashUp {
+  0% {
+    background-color: rgba(0, 210, 106, 0.18);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@keyframes priceFlashDown {
+  0% {
+    background-color: rgba(255, 59, 92, 0.18);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* ── Card hover lift ── */
+.card-hover {
+  transition: transform 0.22s var(--motion-ease), box-shadow 0.22s var(--motion-ease);
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-float);
+}
+
+/* ── Order book depth bars ── */
+.depth-bar-bid {
+  background: linear-gradient(90deg, rgba(0, 210, 106, 0.14) 0%, transparent 100%);
+}
+.depth-bar-ask {
+  background: linear-gradient(270deg, rgba(255, 59, 92, 0.14) 0%, transparent 100%);
+}
+
+/* ── Badge live: пульсирующий индикатор ── */
+.badge-live {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.badge-live::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--up);
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(0, 210, 106, 0.45);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 5px rgba(0, 210, 106, 0);
+  }
+}
+
+/* ── Active card with animated gradient border ── */
+.card-active {
+  position: relative;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.card-active::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  z-index: -1;
+  opacity: 0.4;
+}
+
+.scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+.glass-strong {
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  backdrop-filter: blur(28px) saturate(200%);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.card-flat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.chip-up {
+  color: var(--up);
+  background: rgba(0, 210, 106, 0.12);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.chip-down {
+  color: var(--down);
+  background: rgba(255, 59, 92, 0.12);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.chip-warn {
+  color: var(--warn);
+  background: rgba(239, 166, 46, 0.12);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.chip-accent {
+  color: var(--accent);
+  background: var(--accent-soft);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.chip-neutral {
+  color: var(--muted);
+  background: var(--surface-3);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.btn-solid {
+  height: 48px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.2s var(--motion-ease), transform 0.15s var(--motion-ease),
+    box-shadow 0.2s var(--motion-ease);
+}
+.btn-up {
+  background: var(--up);
+  color: #062f1d;
+  box-shadow: 0 0 20px rgba(0, 210, 106, 0.15);
+}
+.btn-up:active {
+  box-shadow: 0 0 28px rgba(0, 210, 106, 0.30);
+}
+.btn-down {
+  background: var(--down);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(255, 59, 92, 0.15);
+}
+.btn-down:active {
+  box-shadow: 0 0 28px rgba(255, 59, 92, 0.30);
+}
+.btn-accent {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-ghost {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.btn-solid:disabled {
+  opacity: 0.45;
+}
+
+/* Поля ввода: 16px шрифт — iOS не зумит форму при фокусе */
+.inp {
+  height: 42px;
+  padding: 0 12px;
+  font-size: 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s var(--motion-ease);
+}
+.inp:focus {
+  border-color: var(--accent);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+/* Скелетоны с shimmer */
+.skel {
+  position: relative;
+  overflow: hidden;
+  background: var(--skeleton-a);
+  border-radius: 10px;
+}
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    var(--skeleton-b) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Прокрутка с инерцией внутри списков на iOS */
+.will-anim {
+  will-change: transform;
+}
+
+/* Снижение анимаций по prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Odometer: колонки цифр */
+.od {
+  display: inline-flex;
+  align-items: flex-start;
+  line-height: 1;
+}
+.od-col {
+  display: inline-block;
+  overflow: hidden;
+  width: 1ch;
+}
+.od-digit {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  text-align: center;
+}
+.od-char {
+  display: inline-block;
+  line-height: 1;
+}
+
+/* Гусь (кроссфейд тем без поддержки View Transitions API: CSS transition) */
+body,
+[data-theme] {
+  transition: background-color 0.35s var(--motion-ease), color 0.35s var(--motion-ease);
+}
+
+/* ═══════════════ Axiom / Hyperliquid Terminal Styles ═══════════════ */
+.terminal-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  cursor: pointer;
+}
+.terminal-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00d26a;
+  border: 2px solid #080b11;
+  box-shadow: 0 0 10px rgba(0, 210, 106, 0.6);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.terminal-range-slider::-webkit-slider-thumb:hover,
+.terminal-range-slider::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+}
+.terminal-range-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00d26a;
+  border: 2px solid #080b11;
+  box-shadow: 0 0 10px rgba(0, 210, 106, 0.6);
+  cursor: pointer;
+}
+.terminal-range-slider.short-thumb::-webkit-slider-thumb {
+  background: #ff3b5c;
+  box-shadow: 0 0 10px rgba(255, 59, 92, 0.6);
+}
+.terminal-range-slider.short-thumb::-moz-range-thumb {
+  background: #ff3b5c;
+  box-shadow: 0 0 10px rgba(255, 59, 92, 0.6);
+}
+
+.terminal-glow-long {
+  box-shadow: 0 0 24px -2px rgba(0, 210, 106, 0.42), 0 0 8px rgba(0, 210, 106, 0.25);
+}
+.terminal-glow-short {
+  box-shadow: 0 0 24px -2px rgba(255, 59, 92, 0.42), 0 0 8px rgba(255, 59, 92, 0.25);
+}
+
+.price-flash-bg-up {
+  animation: flashGreenBg 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.price-flash-bg-down {
+  animation: flashRedBg 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes flashGreenBg {
+  0% {
+    background-color: rgba(0, 210, 106, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes flashRedBg {
+  0% {
+    background-color: rgba(255, 59, 92, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
