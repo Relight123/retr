@@ -26,7 +26,7 @@ import {
   Star,
   Share2,
   Eye,
-  Repeat,
+  ArrowLeftRight,
   ArrowUpDown,
   Lock,
   Copy,
@@ -42,6 +42,7 @@ import { useMarket } from '../store/market'
 import { useMarketVersion, useTicker } from '../hooks/useTickerPrice'
 import { useTrading, priceOf } from '../store/trading'
 import { CoinIcon } from '../components/CoinIcon'
+import { NetworkBadge } from '../components/CryptoSvg'
 import { PriceChart } from '../components/PriceChart'
 import { OrderBook } from '../components/OrderBook'
 import { TradesTape } from '../components/TradesTape'
@@ -101,8 +102,8 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
   const [activeMainTab, setActiveMainTab] = useState<'notes' | 'holders' | 'about'>('notes')
   const [activeFilter, setActiveFilter] = useState<'open' | 'closed'>('open')
 
-  // Live viewers simulation (oscillates slightly around 668 like Moonshot)
-  const [viewersCount, setViewersCount] = useState(668)
+  // Live viewers simulation (oscillates slightly around 667 like Moonshot)
+  const [viewersCount, setViewersCount] = useState(667)
   useEffect(() => {
     const timer = setInterval(() => {
       setViewersCount((prev) => {
@@ -221,7 +222,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
 
           {/* Right: Pill Mode Switcher (Спот / Перпы) + Star + Share */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Pill button: 🔄 Спот ▾ / 🔄 Перпы ▾ */}
+            {/* Pill button: ⇄ Перпы ∨ / ⇄ Спот ∨ */}
             <button
               onClick={() => {
                 buzz(8)
@@ -230,7 +231,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
               }}
               className="flex items-center gap-1.5 rounded-full border border-white/10 bg-[#161a24] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-white/10 transition-colors shadow-sm"
             >
-              <Repeat size={12} className="text-gray-400" />
+              <ArrowLeftRight size={12} className="text-gray-400" />
               <span>{isPerpMode ? 'Перпы' : 'Спот'}</span>
               <ChevronDown size={12} className="text-gray-400" />
             </button>
@@ -266,16 +267,10 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
           {/* Coin Avatar + Title + Leverage pill + Subtitle */}
           <div className="flex items-center gap-3">
             <div className="relative shrink-0">
-              {displayBase === 'BTC' ? (
-                <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#f7931a] shadow-lg shadow-[#f7931a]/20">
-                  <span className="font-bold text-[28px] text-white select-none">₿</span>
-                </div>
-              ) : (
-                <CoinIcon symbol={symbol} size={52} />
-              )}
-              {/* Corner chain pill badge (Solana turquoise / chain) */}
-              <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#080b11] bg-[#14f195] text-[9px] font-black text-black shadow-md">
-                ◎
+              <CoinIcon symbol={symbol} size={52} />
+              {/* Corner chain pill badge (Solana vector gradient) */}
+              <div className="absolute -bottom-1 -right-1">
+                <NetworkBadge chain="sol" size={18} />
               </div>
             </div>
 
@@ -297,7 +292,7 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
           {/* Right: Large Clean Price + Green Pill Change */}
           <div className="flex flex-col items-end">
             <span className="text-[28px] sm:text-[32px] font-bold tracking-tight text-white leading-tight tnum">
-              {last ? `$${fmtMoonshotPrice(last)}` : '—'}
+              {last ? `$${fmtMoonshotPrice(last)}` : '$80 226,01'}
             </span>
 
             <div
@@ -317,7 +312,10 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
       </div>
 
       {/* ══════════════ 3. SCROLLABLE CHART & TABS CONTENT ══════════════ */}
-      <div className="scroll flex-1 px-3 pt-2" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 96px)' }}>
+      <div
+        className="scroll flex-1 px-3 pt-2"
+        style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 72px)' }}
+      >
         {/* Seamless Chart Container */}
         <div className="overflow-hidden rounded-[20px] bg-[#0c1017] border border-white/[0.06] shadow-xl">
           <div className="h-[310px]">
@@ -517,30 +515,33 @@ export function SymbolScreen({ overlay, onBack }: { overlay: boolean; onBack?: (
 
       {/* ══════════════ 5. FLOATING BOTTOM TRADE BUTTONS ══════════════ */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-xl border-t border-white/[0.06] bg-[#080b11]/90 px-4 pt-3 backdrop-blur-xl"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
+        className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-xl border-t border-white/[0.06] bg-[#080b11]/90 px-4 pt-2.5 backdrop-blur-xl"
+        style={{
+          bottom: 0,
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
+        }}
       >
         <div className="flex items-center gap-3">
-          {/* Green Pill: Купить */}
+          {/* Volumetric Green Pill: Купить */}
           <button
             onClick={() => {
               buzz(8)
               setPickedPrice(null)
               setOrderOpen('buy')
             }}
-            className="flex-1 flex items-center justify-center gap-2 h-13 rounded-full bg-[#00d26a] text-[#032014] font-bold text-[16px] shadow-lg shadow-[#00d26a]/25 hover:brightness-105 active:scale-[0.98] transition-all"
+            className="btn-volumetric-green flex-1 flex items-center justify-center gap-2 h-13 rounded-full text-[16px] font-extrabold cursor-pointer"
           >
             <span>Купить</span>
           </button>
 
-          {/* Dark Pill: Продать */}
+          {/* Volumetric Dark Pill: Продать */}
           <button
             onClick={() => {
               buzz(8)
               setPickedPrice(null)
               setOrderOpen('sell')
             }}
-            className="flex items-center justify-center gap-2 h-13 rounded-full bg-[#1d222e] hover:bg-[#262c3b] text-white font-semibold text-[16px] px-8 border border-white/5 active:scale-[0.98] transition-all"
+            className="btn-volumetric-dark flex items-center justify-center gap-2 h-13 rounded-full text-[16px] font-bold px-8 cursor-pointer"
           >
             <span>Продать</span>
           </button>

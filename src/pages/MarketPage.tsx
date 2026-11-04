@@ -1,10 +1,12 @@
 /** Страница «Рынок»: Moonshot crypto feed.
  *  Top header c аватаром Moonshot, балансом $0,06 $ и кнопкой Депозит.
- *  Вкладки: ☆, Монеты, Движущиеся, Перпы, Акции + фильтр и настройки.
- *  Moonshot карточки: 48x48 сквиркл, цепочка Solana/Pump, V & MC, тикер, возраст 🌱, соцсети, цена, 24ч pill, аудит токена.
+ *  Вкладки: ☆, Монеты, Движущиеся, Перпы + иконки [🎛 Фильтры] [⚙ Настройки] без горизонтального скролла на мобильных.
+ *  Подсказка: «↓ Потяните для обновления».
+ *  Moonshot карточки: 48x48 сквиркл, цепочка Solana/Pump, V & MC, тикер, возраст 🌱, соцсети, цена, 24ч pill, микростаты:
+ *  👤 49,0Млн +0%, 📚 17% ❄️ 0%, 👑 60%, TX 96,0Тыс.
  *  Ультра-быстрый рендеринг без layout-анимаций для 60fps на смартфонах.
  */
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
@@ -24,7 +26,6 @@ import {
   Globe,
   Check,
   Copy,
-  ChevronRight,
 } from 'lucide-react'
 import { useNav } from '../store/navigation'
 import { useMarket } from '../store/market'
@@ -46,7 +47,7 @@ import type { DexPair } from '../api/dexscreener'
 import { dexSearch, dexShortSymbol } from '../api/dexscreener'
 import { OrderSheet } from '../components/OrderSheet'
 
-type TabKey = 'fav' | 'coins' | 'movers' | 'perps' | 'stocks'
+type TabKey = 'fav' | 'coins' | 'movers' | 'perps'
 type SortKey = 'volume' | 'change' | 'losers' | 'name'
 
 /** Форматирование чисел под стиль Moonshot: $1Млн, $209,1Тыс, $1,6Трлн */
@@ -72,7 +73,7 @@ function fmtMoonshotCompact(val: number): string {
   return val.toFixed(0)
 }
 
-/** Форматирование цены в стиле Moonshot: $80 598, $2 415, $0,0034 */
+/** Форматирование цены в стиле Moonshot: $80 351, $2 423, $0,0034 */
 function fmtPriceMoonshot(val: string | number): string {
   const n = typeof val === 'number' ? val : parseFloat(val)
   if (!isFinite(n)) return '—'
@@ -110,29 +111,72 @@ function getCoinMetrics(symbol: string, volume: number, price: number, changePct
     TON: 14e9,
     TRX: 18e9,
     DOT: 10e9,
+    ZEC: 7.1e9,
+    USD1: 1.2e9,
   }
 
   const mcVal = knownMC[base] || Math.max(volume * (6 + (hash % 22)), 210000)
   const isVerified = Boolean(knownMC[base]) || ['PEPE', 'SHIB', 'WIF', 'BONK', 'RENDER', 'APT', 'OP', 'ARB'].includes(base)
-  const isHot = Math.abs(changePct) >= 5 || volume > 60e6 || hash % 4 === 0
+  const isHot = Math.abs(changePct) >= 3 || volume > 50e6 || hash % 3 === 0
 
-  const ages = ['14ч', '25м', '21ч', '7д', '2мес', '5мес', '1г', '3г', '14д', '3ч']
-  const age = `🌱 ${ages[hash % ages.length]}`
+  const knownAges: Record<string, string> = {
+    BTC: '🌱 2мес',
+    ETH: '🌱 14д',
+    SOL: '🌱 3ч',
+    ZEC: '🌱 3ч',
+    USD1: '🌱 14ч',
+    XRP: '🌱 25м',
+    NEAR: '🌱 3ч',
+    BNB: '🌱 2мес',
+    DOGE: '🌱 5мес',
+    SUI: '🌱 7д',
+    PEPE: '🌱 21ч',
+  }
+  const ages = ['14ч', '25м', '21ч', '7д', '2мес', '5мес', '1г', '3ч', '14д']
+  const age = knownAges[base] || `🌱 ${ages[hash % ages.length]}`
 
-  let holders = '24,5Тыс'
-  if (knownMC[base] && knownMC[base] > 50e9) {
-    holders = `${(10 + (hash % 45)).toFixed(1).replace('.', ',')}Млн`
-  } else if (mcVal > 1e7) {
-    holders = `${(15 + (hash % 80)).toFixed(1).replace('.', ',')}Тыс`
-  } else {
-    holders = `${(1 + (hash % 9)).toFixed(1).replace('.', ',')}Тыс`
+  const knownHolders: Record<string, string> = {
+    BTC: '49,0Млн',
+    ETH: '33,0Млн',
+    SOL: '14,0Млн',
+    ZEC: '44,0Тыс',
+    USD1: '65,0Тыс',
+    XRP: '41,0Млн',
+    NEAR: '54,0Тыс',
+    BNB: '28,0Млн',
+    DOGE: '18,5Млн',
+    SUI: '72,0Тыс',
+    PEPE: '115Тыс',
   }
 
-  const dev = hash % 2 === 0 ? 0 : hash % 4
-  const top10 = 5 + (hash % 24)
-  const snipers = hash % 3 === 0 ? 0 : hash % 3
-  const curve = 12 + (hash % 78)
-  const txCount = `${(12 + (hash % 180)).toFixed(1).replace('.', ',')}Тыс`
+  let holders = knownHolders[base]
+  if (!holders) {
+    if (knownMC[base] && knownMC[base] > 50e9) {
+      holders = `${(10 + (hash % 45)).toFixed(1).replace('.', ',')}Млн`
+    } else if (mcVal > 1e7) {
+      holders = `${(15 + (hash % 80)).toFixed(1).replace('.', ',')}Тыс`
+    } else {
+      holders = `${(1 + (hash % 9)).toFixed(1).replace('.', ',')}Тыс`
+    }
+  }
+
+  const knownStats: Record<string, { dev: string; top10: number; snipers: number; curve: number; tx: string }> = {
+    BTC: { dev: '+0%', top10: 17, snipers: 0, curve: 60, tx: '96,0Тыс' },
+    ETH: { dev: '+0%', top10: 13, snipers: 2, curve: 74, tx: '80,0Тыс' },
+    SOL: { dev: '+1%', top10: 18, snipers: 1, curve: 31, tx: '61,0Тыс' },
+    ZEC: { dev: '+1%', top10: 18, snipers: 1, curve: 73, tx: '181,0Тыс' },
+    USD1: { dev: '+0%', top10: 15, snipers: 1, curve: 28, tx: '82,0Тыс' },
+    XRP: { dev: '+1%', top10: 6, snipers: 1, curve: 67, tx: '133,0Тыс' },
+    NEAR: { dev: '+3%', top10: 28, snipers: 2, curve: 71, tx: '131,0Тыс' },
+    BNB: { dev: '+0%', top10: 12, snipers: 0, curve: 65, tx: '88,0Тыс' },
+  }
+
+  const preset = knownStats[base]
+  const dev = preset ? preset.dev : `+${hash % 4}%`
+  const top10 = preset ? preset.top10 : 5 + (hash % 24)
+  const snipers = preset ? preset.snipers : hash % 3
+  const curve = preset ? preset.curve : 15 + (hash % 70)
+  const txCount = preset ? preset.tx : `${(12 + (hash % 180)).toFixed(1).replace('.', ',')}Тыс`
 
   return {
     mcVal,
@@ -156,7 +200,6 @@ export function MoonshotAvatar({ size = 42 }: { size?: number }) {
       style={{ width: size, height: size }}
     >
       <svg viewBox="0 0 100 100" className="h-full w-full">
-        {/* Lavender gradient background */}
         <defs>
           <linearGradient id="ms-avatar-bg" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#c4b5fd" />
@@ -196,13 +239,9 @@ export function MoonshotAvatar({ size = 42 }: { size?: number }) {
         <path d="M25 46 L18 56 L24 54 Z" fill="#15803d" />
 
         {/* Sunglasses */}
-        {/* Left lens */}
         <circle cx="41" cy="48" r="8" fill="#111827" stroke="#22c55e" strokeWidth="1.8" />
-        {/* Right lens */}
         <circle cx="59" cy="48" r="8" fill="#111827" stroke="#22c55e" strokeWidth="1.8" />
-        {/* Bridge */}
         <path d="M49 48 L51 48" stroke="#22c55e" strokeWidth="2" />
-        {/* Lens reflection shine */}
         <path d="M37 46 Q41 44 43 45" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
         <path d="M55 46 Q59 44 61 45" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
       </svg>
@@ -274,7 +313,6 @@ export function MarketPage() {
   const dayPct =
     snap && parseFloat(snap.dayAnchor.equity) > 0 ? (dayPnl / parseFloat(snap.dayAnchor.equity)) * 100 : 0
 
-  // Если у пользователя есть реальный торговый баланс, форматируем его в стиле Moonshot, иначе точное значение со скриншота: 0,06 $
   const balanceText =
     equity > 0 && equity !== 10000
       ? `${equity >= 1000 ? Math.round(equity).toLocaleString('ru-RU') : equity.toFixed(2).replace('.', ',')} $`
@@ -288,7 +326,7 @@ export function MarketPage() {
   const subtextPct = `${Math.abs(dayPct).toFixed(1).replace('.', ',')}%`
   const isUp = dayPct >= 0
 
-  // Фильтрация и сортировка токенов по вкладкам
+  // Фильтрация и сортировка токенов по 4 вкладкам
   const list = useMemo(() => {
     let rows: Ticker[] = Object.values(market.bySymbol)
 
@@ -303,12 +341,6 @@ export function MarketPage() {
         'SHIBUSDT', 'APTUSDT', 'OPUSDT', 'ARBUSDT', 'TONUSDT', 'DOTUSDT',
       ])
       rows = rows.filter((r) => perpsSet.has(r.symbol))
-    } else if (activeTab === 'stocks') {
-      const blueChips = new Set([
-        'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT',
-        'ADAUSDT', 'AVAXUSDT', 'SUIUSDT', 'LINKUSDT', 'DOTUSDT', 'LTCUSDT',
-      ])
-      rows = rows.filter((r) => blueChips.has(r.symbol))
     }
 
     // Текстовый поиск
@@ -354,10 +386,9 @@ export function MarketPage() {
   if (market.loading) {
     return (
       <div className="flex h-full flex-col bg-black text-white">
-        {/* Skeleton Header */}
         <div
           className="flex items-center justify-between px-4 pb-2"
-          style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 12px) + 8px)' }}
+          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 48px)' }}
         >
           <div className="flex items-center gap-2.5">
             <div className="h-11 w-11 rounded-full skel" />
@@ -375,17 +406,18 @@ export function MarketPage() {
 
   return (
     <div className="relative flex h-full flex-col bg-[#050507] text-white">
-      {/* 1. TOP HEADER MOONSHOT */}
+      {/* 1. TOP HEADER MOONSHOT (с отступом под динамический остров / челку) */}
       <div
         className="flex items-center justify-between px-4 pb-2.5 select-none border-b border-white/[0.04]"
-        style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 12px) + 8px)' }}
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 48px)' }}
       >
-        {/* Left: Moonshot circular bean avatar + Balance */}
+        {/* Left: Moonshot circular bean avatar (кликабельный -> portfolio) + Balance */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => nav.setTab('portfolio')}
             className="focus:outline-none transition-transform active:scale-95"
             title="Профиль / Портфель"
+            aria-label="портфель"
           >
             <MoonshotAvatar size={42} />
           </button>
@@ -408,7 +440,7 @@ export function MarketPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowDeposit(true)}
-            className="rounded-full bg-white px-4 py-1.5 text-[13px] font-bold text-black shadow-md hover:bg-zinc-100 active:scale-95 transition-all"
+            className="btn-volumetric-white rounded-full px-4 py-1.5 text-[13px] font-extrabold tracking-tight shadow-md hover:bg-zinc-100 active:scale-95 transition-all"
           >
             Депозит
           </button>
@@ -423,10 +455,10 @@ export function MarketPage() {
         </div>
       </div>
 
-      {/* 2. SUBHEADER TABS */}
-      <div className="flex items-center justify-between border-b border-white/[0.08] px-4 pt-1.5">
-        {/* Horizontal scrollable tab list */}
-        <div className="flex items-center gap-5 overflow-x-auto no-scrollbar py-0.5">
+      {/* 2. SUBHEADER TABS (Идеально помещаются на экране без горизонтального скролла) */}
+      <div className="flex items-center justify-between border-b border-white/[0.08] px-4 pt-1.5 select-none">
+        {/* Left: 4 вкладки: ☆, Монеты, Движущиеся, Перпы */}
+        <div className="flex items-center gap-4 sm:gap-6 py-0.5">
           {/* Star Favorites */}
           <button
             onClick={() => setActiveTab('fav')}
@@ -442,7 +474,7 @@ export function MarketPage() {
             )}
           </button>
 
-          {/* Монеты (Coins - default) */}
+          {/* Монеты (Coins - default с четкой белой полоской) */}
           <button
             onClick={() => setActiveTab('coins')}
             className={`relative pb-2.5 text-[14px] font-bold transition-colors whitespace-nowrap ${
@@ -486,31 +518,16 @@ export function MarketPage() {
               <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white rounded-full" />
             )}
           </button>
-
-          {/* Акции (Stocks / Blue-chips) */}
-          <button
-            onClick={() => setActiveTab('stocks')}
-            className={`relative pb-2.5 text-[14px] font-bold transition-colors whitespace-nowrap ${
-              activeTab === 'stocks'
-                ? 'text-white'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            Акции
-            {activeTab === 'stocks' && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white rounded-full" />
-            )}
-          </button>
         </div>
 
-        {/* Filter button & settings gear button */}
-        <div className="flex items-center gap-2 pb-2 pl-2 shrink-0">
+        {/* Right: Иконки [🎛 Фильтры] [⚙ Настройки] */}
+        <div className="flex items-center gap-1.5 pb-2 pl-2 shrink-0">
           <button
             onClick={() => setShowFilterBar((v) => !v)}
             className={`transition-colors p-1.5 rounded-lg ${
               showFilterBar || query ? 'text-white bg-zinc-800' : 'text-zinc-400 hover:text-white'
             }`}
-            title="Фильтр и поиск"
+            title="Фильтры и поиск"
             aria-label="фильтр"
           >
             <SlidersHorizontal size={17} />
@@ -568,6 +585,11 @@ export function MarketPage() {
           </div>
         </div>
       )}
+
+      {/* Аккуратная строчка подсказки pull-to-refresh */}
+      <div className="text-center py-1.5 text-[11px] font-medium text-zinc-500/80 border-b border-white/[0.02] select-none">
+        ↓ Потяните для обновления
+      </div>
 
       {/* 3. SCROLLABLE MOONSHOT FEED */}
       <div ref={scrollRef} className="scroll flex-1" style={{ touchAction: 'pan-y' }}>
@@ -688,9 +710,9 @@ function VirtualRows({
 
 /** Moonshot Token Feed Card (`MarketRow`):
  *  - Сквиркл аватар (48x48px, rounded-2xl) с бейджем Solana/Pump
- *  - 1-я строка: Название токена + ГОРЯЧЕЕ / галка | V $5.1B  MC $1.6T (MC в голубом цвете)
- *  - 2-я строка: Тикер (BTC), возраст 🌱 2мес, соцсети | Цена ($80 598) + 24ч pill (↑ 3,8%)
- *  - 3-я строка: Холдеры 👤 24,5Тыс, дев ✛ 0%, топ10 📚 8%, снайперы ⛯ 0%, кривая 👑 22% | TX 20,6Тыс
+ *  - 1-я строка: Название токена + зеленая галочка + ГОРЯЧЕЕ + звезда | V $1,7Млрд  MC $1,7Трлн (MC в голубом цвете)
+ *  - 2-я строка: Тикер (BTC), возраст (🌱 2мес), соцсети | Цена ($80 351) + 24ч pill (↑ 3,6%)
+ *  - 3-я строка: Микростаты: 👤 49,0Млн +0%, 📚 17% ❄️ 0%, 👑 60%, TX 96,0Тыс
  *  - Ультра-быстрый чистый HTML без layout Framer Motion!
  */
 const MarketRow = React.memo(function MarketRow({
@@ -721,6 +743,9 @@ const MarketRow = React.memo(function MarketRow({
   const volFormatted = fmtMoonshotCompact(volNum)
   const mcFormatted = fmtMoonshotCompact(metrics.mcVal)
 
+  // Показываем золотую звезду для избранных или топ-3 монет
+  const showStar = fav || ['BTC', 'ETH', 'SOL'].includes(base)
+
   return (
     <div
       className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer border-b border-white/[0.04] select-none transition-colors duration-100 active:bg-white/[0.06] hover:bg-white/[0.03]"
@@ -736,9 +761,9 @@ const MarketRow = React.memo(function MarketRow({
 
       {/* 2. Middle & Right content */}
       <div className="min-w-0 flex-1 flex flex-col justify-center gap-1">
-        {/* Top line: Name + badge / checkmark | V $...  MC $... */}
+        {/* Top line: Name + checkmark + ГОРЯЧЕЕ + star | V $...  MC $... */}
         <div className="flex items-center justify-between gap-1.5">
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
             <span className="truncate text-[14px] font-bold text-white tracking-tight leading-tight">
               {displayName}
             </span>
@@ -750,7 +775,9 @@ const MarketRow = React.memo(function MarketRow({
                 ГОРЯЧЕЕ
               </span>
             )}
-            {fav && <Star size={11} className="shrink-0 fill-amber-400 text-amber-400" />}
+            {showStar && (
+              <Star size={11} className="shrink-0 fill-amber-400 text-amber-400" />
+            )}
           </div>
           <div className="shrink-0 text-right text-[12px] font-bold tnum">
             <span className="text-zinc-300">V ${volFormatted}</span>{' '}
@@ -795,19 +822,19 @@ const MarketRow = React.memo(function MarketRow({
           </div>
         </div>
 
-        {/* Third line: Holders count & audit stats | TX count */}
+        {/* Third line: Микростаты: 👤 49,0Млн +0%, 📚 17% ❄️ 0%, 👑 60%, TX 96,0Тыс */}
         <div className="flex items-center justify-between text-[11px] text-zinc-400 tnum pt-0.5">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="flex items-center gap-0.5 text-zinc-400">
               <span>👤</span>
               <span>{metrics.holders}</span>
+              <span className="text-emerald-400 font-medium ml-0.5">{metrics.dev}</span>
             </span>
-            <span className="text-emerald-400 font-medium">✛ {metrics.dev}%</span>
             <span className="text-zinc-400 font-medium">📚 {metrics.top10}%</span>
-            <span className="text-emerald-400 font-medium">⛯ {metrics.snipers}%</span>
+            <span className="text-emerald-400 font-medium">❄️ {metrics.snipers}%</span>
             <span className="text-amber-400 font-medium">👑 {metrics.curve}%</span>
           </div>
-          <div className="text-zinc-400 font-medium">
+          <div className="text-zinc-400 font-medium shrink-0 ml-1">
             TX {metrics.txCount}
           </div>
         </div>

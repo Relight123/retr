@@ -47,7 +47,7 @@ export function HistoryPage() {
     <div className="flex h-full flex-col">
       <Header title={t('history.title')} />
 
-      <div className="scroll flex-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 84px)' }}>
+      <div className="scroll flex-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}>
         <div className="px-3 pt-2">
           <Seg
             size="sm"

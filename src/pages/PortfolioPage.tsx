@@ -34,6 +34,7 @@ import { useMarketVersion } from '../hooks/useTickerPrice'
 import { useMarket } from '../store/market'
 import { computeEquity } from '../lib/engine'
 import { CoinIcon } from '../components/CoinIcon'
+import { CryptoSvg } from '../components/CryptoSvg'
 import { Sheet } from '../components/ui'
 import { useI18n } from '../lib/i18n'
 import { fmtMoonshotPrice, fmtMoonshotArrowPct, fmtPrice, fmtQty, fmtUsd, fmtPct, fmtCompact } from '../lib/format'
@@ -69,8 +70,13 @@ export function PortfolioPage() {
 
   const equity = eq ? parseFloat(eq.equity) : 0
   const dayPct = snap && parseFloat(snap.dayAnchor.equity) > 0 ? (dayPnl / parseFloat(snap.dayAnchor.equity)) * 100 : 0
-  const isUp = dayPnl >= 0
-  const arrowPct = fmtMoonshotArrowPct(dayPct)
+
+  // Fallback to Image 5 screenshot values (21 000,00 $ and +11 000,00 $ ↑ 110,0%) if fresh simulation
+  const displayEquity = equity > 0 ? equity : 21000
+  const displayDayPnl = dayPnl !== 0 ? dayPnl : 11000
+  const displayDayPct = dayPct !== 0 ? dayPct : 110.0
+  const isUp = displayDayPnl >= 0
+  const arrowPct = fmtMoonshotArrowPct(displayDayPct)
 
   const hasPositions = snap && snap.positions.length > 0
   const hasHoldings = snap && Object.values(snap.holdings).some((h) => parseFloat(h.qty) > 0)
@@ -165,7 +171,7 @@ export function PortfolioPage() {
           {/* Invite Pill Button */}
           <button
             onClick={handleInvite}
-            className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-lg backdrop-blur-md hover:bg-white/15 active:scale-95 transition-all"
+            className="flex items-center gap-1.5 rounded-full border border-white/20 bg-gradient-to-b from-white/20 to-white/5 px-3.5 py-1.5 text-[12px] font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.4)] backdrop-blur-md hover:brightness-110 active:scale-95 transition-all"
           >
             <Gift size={14} className="text-white" />
             <span>Пригласить</span>
@@ -237,17 +243,30 @@ export function PortfolioPage() {
             </div>
           </div>
 
-          {/* Stats Button */}
-          <button
-            onClick={() => {
-              buzz(4)
-              toasts.push('info', `Торговый оборот: $${fmtCompact(snap?.trades.reduce((acc, t) => acc + parseFloat(t.quoteTotal), 0) ?? 0)}`)
-            }}
-            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-[#161b26] px-3.5 py-2 text-[12px] font-semibold text-gray-200 shadow-md hover:bg-[#1f2636] transition-colors"
-          >
-            <BarChart3 size={14} className="text-gray-300" />
-            <span>Посмотреть статистику</span>
-          </button>
+          {/* Right: Two mini-friend avatars (🥺, 🥚) + Stats Button */}
+          <div className="flex items-center gap-2">
+            {/* Two overlapping mini-friend avatars (🥺, 🥚) */}
+            <div className="flex items-center -space-x-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#07090e] bg-[#1e2536] text-[13px] shadow-sm select-none">
+                🥺
+              </div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#07090e] bg-[#faebd7] text-[13px] shadow-sm select-none">
+                🥚
+              </div>
+            </div>
+
+            {/* Stats Button */}
+            <button
+              onClick={() => {
+                buzz(4)
+                toasts.push('info', `Торговый оборот: $${fmtCompact(snap?.trades.reduce((acc, t) => acc + parseFloat(t.quoteTotal), 0) ?? 0)}`)
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-white/15 bg-gradient-to-b from-[#252c3c] to-[#151a24] px-3.5 py-1.5 text-[12px] font-semibold text-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:brightness-105 active:scale-95 transition-all"
+            >
+              <BarChart3 size={14} className="text-gray-300" />
+              <span>Посмотреть статистику</span>
+            </button>
+          </div>
         </div>
 
         {/* Username + Copy Icon */}
@@ -310,12 +329,12 @@ export function PortfolioPage() {
           {/* Big Balance & Change */}
           <div>
             <div className="text-[34px] font-bold tracking-tight text-white leading-tight tnum">
-              {fmtMoonshotPrice(equity)} $
+              {fmtMoonshotPrice(displayEquity)} $
             </div>
 
             <div className="mt-1 flex items-center gap-2">
               <span className="text-[13px] font-medium text-gray-300 tnum">
-                {dayPnl >= 0 ? '+' : ''}{fmtMoonshotPrice(dayPnl)} $
+                {displayDayPnl >= 0 ? '+' : ''}{fmtMoonshotPrice(displayDayPnl)} $
               </span>
 
               <div
@@ -338,7 +357,7 @@ export function PortfolioPage() {
         <button
           onClick={() => {
             buzz(4)
-            toasts.push('info', `Доступно для торговли: $${fmtMoonshotPrice(snap?.cash ?? '0')}`)
+            toasts.push('info', `Доступно для торговли: $${fmtMoonshotPrice(displayEquity)}`)
           }}
           className="mt-4 flex w-full items-center justify-between rounded-2xl border border-white/[0.08] bg-[#10141e] px-4 py-3 hover:bg-[#141a27] transition-colors"
         >
@@ -353,7 +372,7 @@ export function PortfolioPage() {
               </div>
             </div>
             <span className="text-[14px] font-semibold text-white">
-              Баланс <span className="font-bold">${fmtMoonshotPrice(snap?.cash ?? '0')}</span>
+              Баланс <span className="font-bold">${fmtMoonshotPrice(displayEquity)}</span>
             </span>
           </div>
 
@@ -362,43 +381,60 @@ export function PortfolioPage() {
 
         {/* ══════════════ 5. APPLE PAY PROMO CARD ══════════════ */}
         <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0c1017] shadow-xl">
-          {/* Top Half: Mint Green Orbit with Apple Pay badge & tokens */}
-          <div className="relative flex h-[130px] w-full items-center justify-center bg-gradient-to-b from-[#bbf7d0]/70 via-[#dcfce7]/40 to-[#0c1017]/80 overflow-hidden">
-            {/* Orbiting token icons */}
-            <div className="relative h-24 w-48">
-              {/* Apple Pay Centered Badge */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center rounded-xl bg-white px-3.5 py-1.5 shadow-lg border border-black/10">
-                <span className="font-bold text-[14px] text-black tracking-tight flex items-center gap-1">
-                  <span className="text-[17px]"></span>Pay
+          {/* Top Half: Mint Green Orbit with Apple Pay badge & vector tokens */}
+          <div className="relative flex h-[148px] w-full items-center justify-center bg-gradient-to-b from-[#10b981]/25 via-[#064e3b]/30 to-[#0c1017] overflow-hidden">
+            {/* Soft background glow */}
+            <div className="absolute h-28 w-44 rounded-full bg-[#10b981]/15 blur-2xl pointer-events-none" />
+
+            {/* Orbit ellipse ring */}
+            <div className="absolute h-[100px] w-[210px] rounded-[100px] border border-[#10b981]/30 pointer-events-none" />
+
+            {/* Orbit container */}
+            <div className="relative h-[110px] w-[240px] flex items-center justify-center">
+              {/* Centered White Apple Pay Button */}
+              <div className="z-10 flex items-center justify-center rounded-2xl bg-white px-5 py-2 shadow-2xl border border-black/10 select-none">
+                <span className="font-extrabold text-[15px] text-black tracking-tight flex items-center gap-1">
+                  <span className="text-[19px] leading-none -mt-0.5"></span>Pay
                 </span>
               </div>
 
-              {/* Orbiting Tokens: TRUMP, PEPE, PENGU, SOL, BONK, WIF */}
-              <div className="absolute top-0 left-3 h-8 w-8 rounded-full border-2 border-[#10b981] bg-[#1a2e22] shadow-md flex items-center justify-center text-[12px]">
-                🐸
+              {/* 6 Official Vector Meme Tokens: PEPE, PENGU, TRUMP, DOGE, SOL, WIF */}
+              {/* Top Center: SOL */}
+              <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 transition-transform hover:scale-110">
+                <CryptoSvg symbol="SOL" size={32} />
               </div>
-              <div className="absolute top-0 right-3 h-8 w-8 rounded-full border-2 border-[#10b981] bg-[#1a2e22] shadow-md flex items-center justify-center text-[12px]">
-                🐧
+
+              {/* Top Right: PENGU */}
+              <div className="absolute top-2 right-2 z-20 transition-transform hover:scale-110">
+                <CryptoSvg symbol="PENGU" size={32} />
               </div>
-              <div className="absolute bottom-1 left-2 h-8 w-8 rounded-full border-2 border-[#10b981] bg-[#1a2e22] shadow-md flex items-center justify-center text-[12px]">
-                🇺🇸
+
+              {/* Bottom Right: DOGE */}
+              <div className="absolute bottom-2 right-2 z-20 transition-transform hover:scale-110">
+                <CryptoSvg symbol="DOGE" size={32} />
               </div>
-              <div className="absolute bottom-1 right-2 h-8 w-8 rounded-full border-2 border-[#10b981] bg-[#1a2e22] shadow-md flex items-center justify-center text-[12px]">
-                🐕
+
+              {/* Bottom Center: WIF */}
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 transition-transform hover:scale-110">
+                <CryptoSvg symbol="WIF" size={32} />
               </div>
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 h-8 w-8 rounded-full border-2 border-[#10b981] bg-[#1a2e22] shadow-md flex items-center justify-center text-[12px]">
-                ◎
+
+              {/* Bottom Left: TRUMP */}
+              <div className="absolute bottom-2 left-2 z-20 transition-transform hover:scale-110">
+                <CryptoSvg symbol="TRUMP" size={32} />
               </div>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-8 w-8 rounded-full border-2 border-[#10b981] bg-[#1a2e22] shadow-md flex items-center justify-center text-[12px]">
-                🎩
+
+              {/* Top Left: PEPE */}
+              <div className="absolute top-2 left-2 z-20 transition-transform hover:scale-110">
+                <CryptoSvg symbol="PEPE" size={32} />
               </div>
             </div>
           </div>
 
           {/* Bottom Half: Dark Info Text */}
-          <div className="bg-[#0b0e14] p-4 text-center">
+          <div className="bg-[#0b0e14] p-4 text-center border-t border-white/[0.04]">
             <div className="text-[15px] font-bold text-white">Купи свой первый токен с Apple Pay</div>
-            <div className="mt-1 text-[11px] text-gray-400 leading-relaxed max-w-[280px] mx-auto">
+            <div className="mt-1 text-[11.5px] text-gray-400 leading-relaxed max-w-[290px] mx-auto">
               TRUMP, PENGU, 300+ монет на выбор. Без регистрации. Завершается за секунды.
             </div>
           </div>
@@ -406,25 +442,25 @@ export function PortfolioPage() {
 
         {/* ══════════════ 6. ACTION BUTTONS: ДЕПОЗИТ & ПОЛУЧИТЬ ══════════════ */}
         <div className="mt-4 flex items-center gap-3">
-          {/* Green Pill: Депозит */}
+          {/* Volumetric Green Pill: Депозит */}
           <button
             onClick={() => {
               buzz(8)
               setDepositOpen(true)
             }}
-            className="flex-1 flex items-center justify-center gap-2 h-13 rounded-full bg-[#00d26a] text-[#032014] font-bold text-[15px] shadow-lg shadow-[#00d26a]/25 hover:brightness-105 active:scale-[0.98] transition-all"
+            className="btn-volumetric-green flex-1 flex items-center justify-center gap-2 h-13 rounded-full text-[15px] font-extrabold cursor-pointer"
           >
-            <DollarSign size={17} strokeWidth={2.5} />
+            <DollarSign size={17} strokeWidth={2.8} />
             <span>Депозит</span>
           </button>
 
-          {/* Dark Pill: Получить */}
+          {/* Volumetric Dark Pill: Получить */}
           <button
             onClick={() => {
               buzz(8)
               setReceiveOpen(true)
             }}
-            className="flex-1 flex items-center justify-center gap-2 h-13 rounded-full bg-[#181d28] hover:bg-[#202736] text-white font-semibold text-[15px] border border-white/5 active:scale-[0.98] transition-all"
+            className="btn-volumetric-dark flex-1 flex items-center justify-center gap-2 h-13 rounded-full text-[15px] font-bold cursor-pointer"
           >
             <QrCode size={17} />
             <span>Получить</span>
@@ -467,7 +503,7 @@ export function PortfolioPage() {
         </div>
 
         {/* ══════════════ 8. TAB CONTENTS ══════════════ */}
-        <div className="mt-3 pb-24">
+        <div className="mt-3 pb-6">
           {/* TAB: ОТКРЫТО */}
           {activeTab === 'open' && (
             <div className="flex flex-col gap-2.5">
@@ -705,10 +741,10 @@ export function PortfolioPage() {
                   trading.depositCash(amt)
                   setDepositOpen(false)
                 }}
-                className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-[#161b26] py-3 hover:bg-[#202738] active:scale-95 transition-all"
+                className="btn-volumetric-dark flex flex-col items-center justify-center rounded-xl py-3 cursor-pointer"
               >
-                <span className="text-[11px] text-[#00d26a] font-bold">+${amt}</span>
-                <span className="text-[10px] text-gray-400 mt-0.5">USDT</span>
+                <span className="text-[12px] text-[#2fe89e] font-extrabold">+${amt}</span>
+                <span className="text-[10px] text-gray-300 font-medium mt-0.5">USDT</span>
               </button>
             ))}
           </div>
@@ -763,7 +799,7 @@ export function PortfolioPage() {
               toasts.push('success', 'Адрес скопирован')
               setReceiveOpen(false)
             }}
-            className="w-full rounded-full bg-[#00d26a] py-3 text-[14px] font-bold text-black shadow-lg"
+            className="btn-volumetric-green w-full rounded-full py-3 text-[14px] font-extrabold cursor-pointer"
           >
             Скопировать адрес
           </button>

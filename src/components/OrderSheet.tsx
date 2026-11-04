@@ -711,12 +711,12 @@ export function OrderSheet({
           <button
             disabled={!canSubmit}
             onClick={submit}
-            className={`flex h-12 w-full items-center justify-center gap-2 rounded-xl font-semibold text-[15px] transition-all active:scale-[0.98] ${
+            className={`flex h-12 w-full items-center justify-center gap-2 rounded-xl font-bold text-[15px] cursor-pointer ${
               !canSubmit
                 ? 'opacity-40 bg-surface-3 text-muted cursor-not-allowed'
                 : isLong
-                ? 'bg-[#00c076] text-[#032014]'
-                : 'bg-[#ff3b5c] text-white'
+                ? 'btn-volumetric-green'
+                : 'btn-volumetric-red'
             }`}
           >
             {isLong ? <Zap size={16} className="fill-current" /> : <Flame size={16} className="fill-current" />}

@@ -33,13 +33,13 @@ export function BottomNav() {
     <AnimatePresence>
       {!symbolOpen && (
         <motion.nav
-          initial={{ y: 24, opacity: 0, scale: 0.96 }}
+          initial={{ y: 16, opacity: 0, scale: 0.96 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 24, opacity: 0, scale: 0.96 }}
+          exit={{ y: 16, opacity: 0, scale: 0.96 }}
           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="fixed bottom-4 inset-x-0 mx-auto w-[92%] max-w-sm z-50 pointer-events-auto select-none"
+          className="fixed inset-x-0 mx-auto w-[92%] max-w-sm z-50 pointer-events-auto select-none"
           style={{
-            bottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+            bottom: 'max(6px, calc(env(safe-area-inset-bottom, 0px) * 0.4 + 4px))',
           }}
         >
           <div
@@ -105,7 +105,7 @@ export function BottomNav() {
                     )}
                     <span
                       className={`relative z-10 transition-colors duration-150 ${
-                        active ? 'text-white' : 'text-[#8b95a8] hover:text-white/80'
+                        active ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.45)]' : 'text-[#8b95a8] hover:text-white/80'
                       }`}
                     >
                       <Icon size={20} strokeWidth={2} />

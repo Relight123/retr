@@ -12,6 +12,7 @@ import { motion } from 'framer-motion'
 import { useCoinMeta } from '../hooks/useCoinMeta'
 import { cleanCoinSymbol, getBaseSymbol } from '../api/coingecko'
 import { hash32 } from '../lib/util'
+import { hasCryptoSvg, CryptoSvg } from './CryptoSvg'
 
 const HUES = [
   ['#f7931a', '#fdb913'], // Bitcoin gold
@@ -45,6 +46,21 @@ export function CoinIcon({
   const base = cleanCoinSymbol(symbol) || symbol
   const meta = useCoinMeta(base)
   const baseForIcon = getBaseSymbol(base)
+  const normKey = (baseForIcon || base).toUpperCase()
+
+  // 1) Official inline vector SVG registry (instant 0ms, crisp vector, never blank)
+  if (!src && hasCryptoSvg(normKey)) {
+    return (
+      <CryptoSvg
+        symbol={normKey}
+        size={size}
+        rounded={rounded}
+        layoutId={layoutId}
+        className={className}
+        style={style}
+      />
+    )
+  }
 
   // Candidate image sources in order:
   // 1) src (if passed explicitly)

@@ -1,27 +1,39 @@
 /** Настройки: счёт (сброс/комиссия/плечо), вид, язык, звуки, DEX, данные, о приложении. */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Search } from 'lucide-react'
 import { useSettings } from '../store/settings'
 import { useTrading } from '../store/trading'
 import { useMarket } from '../store/market'
+import { useNav } from '../store/navigation'
 import { exportAll, importAll, exportFileName } from '../store/backup'
 import { Header } from '../components/Atomics'
+import { CoinIcon } from '../components/CoinIcon'
 import { Seg, Sheet, TapButton } from '../components/ui'
 import { useToasts } from '../store/toasts'
 import { useI18n } from '../lib/i18n'
-import { fmtUsd } from '../lib/format'
+import { fmtPrice, fmtUsd } from '../lib/format'
 import { requestPersistentStorage } from '../lib/platform'
 
 export function SettingsPage() {
   const { t, lang, setLang } = useI18n()
   const s = useSettings()
+  const nav = useNav()
   const trading = useTrading()
+  const marketTickers = useMarket((st) => st.bySymbol)
   const market = useMarket((st) => st.providerId)
   const snap = trading.snap
 
+  const [searchQuery, setSearchQuery] = useState('')
   const [resetOpen, setResetOpen] = useState(false)
   const [fee, setFee] = useState(String(s.feePct))
   const [persist, setPersist] = useState<boolean | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toUpperCase()
+    if (!q) return []
+    return Object.values(marketTickers).filter((t) => t.symbol.includes(q)).slice(0, 15)
+  }, [searchQuery, marketTickers])
 
   useEffect(() => {
     navigator.storage?.persisted?.().then(setPersist).catch(() => setPersist(null))
@@ -52,10 +64,63 @@ export function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <Header title={t('settings.title')} />
+      <Header title={searchQuery ? 'Поиск' : t('settings.title')} />
 
-      <div className="scroll flex-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 84px)' }}>
-        <Group title={t('settings.account')}>
+      {/* Quick Search Bar for Search tab */}
+      <div className="px-4 pt-2 pb-2">
+        <div className="relative flex items-center">
+          <Search size={16} className="absolute left-3.5 text-gray-400 pointer-events-none" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Поиск монеты, пары или тикера..."
+            className="w-full h-11 pl-10 pr-9 rounded-xl bg-[#141824] border border-white/10 text-white placeholder-gray-500 text-[14px] outline-none focus:border-[#00d26a] transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-gray-300 hover:text-white text-xs font-bold"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="scroll flex-1" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}>
+        {searchQuery ? (
+          <div className="px-4 py-2 flex flex-col gap-2">
+            {searchResults.length > 0 ? (
+              searchResults.map((t) => (
+                <div
+                  key={t.symbol}
+                  onClick={() => nav.openSymbol(t.symbol)}
+                  className="flex items-center justify-between rounded-xl bg-[#121622] p-3 border border-white/5 hover:bg-[#161c2a] transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <CoinIcon symbol={t.symbol.replace('USDT', '')} size={32} />
+                    <div>
+                      <div className="font-bold text-[14px] text-white">{t.symbol.replace('USDT', '')}</div>
+                      <div className="text-[11px] text-gray-400">USDT</div>
+                    </div>
+                  </div>
+                  <div className="text-right tnum">
+                    <div className="font-bold text-[13px] text-white">${fmtPrice(t.last)}</div>
+                    <div className={`text-[11px] font-semibold ${t.changePct24h >= 0 ? 'text-[#00d26a]' : 'text-[#ff3b5c]'}`}>
+                      {t.changePct24h >= 0 ? '+' : ''}{t.changePct24h.toFixed(2)}%
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500 text-[13px]">
+                Ничего не найдено по запросу «{searchQuery}»
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <Group title={t('settings.account')}>
           <Row label={t('settings.startBalance')} trailing={<span className="tnum font-semibold">{fmtUsd(snap?.startBalance ?? '0')}</span>} />
           <Row
             label={t('settings.reset')}
@@ -151,6 +216,8 @@ export function SettingsPage() {
           </p>
         </div>
         <p className="px-8 pt-3 pb-4 text-center text-[10.5px] text-faint">{t('app.disclaimer')}</p>
+          </>
+        )}
       </div>
 
       <Sheet open={resetOpen} onOpenChange={setResetOpen} title={t('settings.resetConfirm')}>
